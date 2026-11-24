@@ -84,6 +84,13 @@ public class StorageChunkCacheScanner extends Module {
         .build()
     );
 
+    private final Setting<Boolean> chroma = sgGeneral.add(new BoolSetting.Builder()
+        .name("chroma")
+        .description("Cycles the hue over time.")
+        .defaultValue(false)
+        .build()
+    );
+
     private final Setting<Integer> hue = sgGeneral.add(new IntSetting.Builder()
         .name("hue")
         .description("Base HSB hue, from 0 to 360 degrees.")
@@ -114,13 +121,6 @@ public class StorageChunkCacheScanner extends Module {
         .description("Overlay opacity.")
         .defaultValue(180)
         .range(0, 255)
-        .build()
-    );
-
-    private final Setting<Boolean> chroma = sgGeneral.add(new BoolSetting.Builder()
-        .name("chroma")
-        .description("Cycles the hue over time.")
-        .defaultValue(false)
         .build()
     );
 
