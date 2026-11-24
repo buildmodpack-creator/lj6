@@ -16,9 +16,6 @@
       "com.example.addon.AddonTemplate"
     ]
   },
-  "mixins": [
-    "addon-template.mixins.json"
-  ],
   "custom": {
     "meteor-client:color": "190,90,220",
     "modmenu": {
