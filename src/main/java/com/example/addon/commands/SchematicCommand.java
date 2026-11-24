@@ -118,6 +118,30 @@ public class SchematicCommand extends Command {
             return SINGLE_SUCCESS;
         }));
 
+
+        builder.then(literal("anchor").executes(context -> {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (SchematicManager.getCurrent() == null) {
+                info("Load a schematic first.");
+            } else if (minecraft.player == null) {
+                info("Open a world before setting the schematic anchor.");
+            } else {
+                SchematicManager.setAnchor(minecraft.player.blockPosition());
+                info("Schematic origin set to your current block position.");
+            }
+            return SINGLE_SUCCESS;
+        }));
+
+        builder.then(literal("origin").executes(context -> {
+            var anchor = SchematicManager.getAnchor();
+            if (anchor == null) {
+                info("No fixed origin. Preview follows your current block position.");
+            } else {
+                info("Schematic origin: " + anchor.getX() + ", " + anchor.getY() + ", " + anchor.getZ());
+            }
+            return SINGLE_SUCCESS;
+        }));
+
         builder.then(literal("clear").executes(context -> {
             SchematicManager.clear();
             info("Cleared the loaded schematic.");
