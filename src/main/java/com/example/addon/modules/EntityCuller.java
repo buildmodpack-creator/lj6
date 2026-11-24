@@ -1,7 +1,6 @@
 package com.example.addon.modules;
 
 import com.example.addon.AddonTemplate;
-import meteordevelopment.meteorclient.settings.DoubleSetting;
 import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
@@ -31,7 +30,7 @@ public class EntityCuller extends Module {
     );
 
     public EntityCuller() {
-        super(AddonTemplate.CATEGORY, "entity-culler",
+        super(AddonTemplate.FIX_LAG_CATEGORY, "entity-culler",
             "Skips rendering entities beyond a distance or outside the camera view cone.");
         INSTANCE = this;
     }
@@ -43,13 +42,15 @@ public class EntityCuller extends Module {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null || entity == mc.player || entity.isRemoved()) return false;
 
-        Vec3 cameraPos = mc.gameRenderer.getMainCamera().getPosition();
+        var camera = mc.gameRenderer.getMainCamera();
+        Vec3 cameraPos = camera.getPosition();
         Vec3 toEntity = entity.getBoundingBox().getCenter().subtract(cameraPos);
         double maxDistance = module.distance.get();
-        if (toEntity.lengthSqr() > maxDistance * maxDistance) return true;
-        if (toEntity.lengthSqr() < 1.0E-6 || module.viewAngle.get() >= 360) return false;
+        double lengthSquared = toEntity.lengthSqr();
+        if (lengthSquared > maxDistance * maxDistance) return true;
+        if (lengthSquared < 1.0E-6 || module.viewAngle.get() >= 360) return false;
 
-        double dot = toEntity.normalize().dot(mc.gameRenderer.getMainCamera().getLookVector());
+        double dot = toEntity.normalize().dot(camera.getLookVector());
         double threshold = Math.cos(Math.toRadians(module.viewAngle.get() * 0.5));
         return dot < threshold;
     }
