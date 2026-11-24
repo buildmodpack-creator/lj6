@@ -9,6 +9,8 @@ LJCT is a Meteor Client addon project targeting Minecraft 1.21.4 and Java 21.
 - Previews the adjacent placement position when holding a block.
 - Target and preview colors can be changed in module settings.
 - This is a visual aid; movement and block placement remain under player control.
+- Optional schematic outline preview is available after loading a `.schem` file. It starts at the player's block position; enable `schematic-preview` in Build Assist settings.
+- `preview-block-limit` defaults to 256 to reduce rendering cost on mobile devices.
 
 ### Schematic reader
 - Reads Sponge schematic v2 and v3 `.schem` files.
