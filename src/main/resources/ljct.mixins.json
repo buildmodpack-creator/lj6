@@ -6,7 +6,8 @@
   "client": [
     "ScreenEffectRendererMixin",
     "EntityRenderDispatcherMixin",
-    "ParticleEngineMixin"
+    "ParticleEngineMixin",
+    "ClientChunkCacheMixin"
   ],
   "injectors": {
     "defaultRequire": 1
