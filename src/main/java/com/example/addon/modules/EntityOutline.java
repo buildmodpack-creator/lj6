@@ -15,18 +15,14 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 
-/**
- * Lightweight entity bounding-box outlines using Meteor's existing 3D renderer.
- * No hidden-entity discovery or world scanning beyond entities already exposed
- * by the client level's renderable-entity collection.
- */
+/** Draws simple AABB wireframes for client-side renderable entities. */
 public class EntityOutline extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
     private final Setting<Integer> distance = sgGeneral.add(new IntSetting.Builder()
         .name("distance")
         .description("Maximum outline distance in blocks.")
-        .defaultValue(48)
+        .defaultValue(32)
         .min(8)
         .sliderMax(128)
         .build()
@@ -55,7 +51,7 @@ public class EntityOutline extends Module {
 
     public EntityOutline() {
         super(AddonTemplate.VISUAL_CATEGORY, "entity-outline",
-            "Draws lightweight outlines around visible client-side entities.");
+            "Draws AABB wireframes around nearby renderable entities.");
     }
 
     @EventHandler
@@ -75,7 +71,7 @@ public class EntityOutline extends Module {
                 continue;
             }
 
-            AABB bounds = entity.getBoundingBox().inflate(0.015);
+            AABB bounds = entity.getBoundingBox();
             event.renderer.box(bounds, color, color, ShapeMode.Lines, 0);
         }
     }
