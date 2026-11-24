@@ -34,10 +34,30 @@ public final class SchematicData {
         return states[x + z * width + y * width * length];
     }
 
-    /** Returns the number of occurrences of each block state. */
+    /** Counts required non-air blocks by block ID (state properties are ignored). */
+    public Map<String, Integer> getRequiredMaterialCounts() {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String state : states) {
+            if (isAir(state)) continue;
+            counts.merge(getBlockId(state), 1, Integer::sum);
+        }
+        return Collections.unmodifiableMap(counts);
+    }
+
+    /** Kept for callers that need the original palette-state counts, including air. */
     public Map<String, Integer> getMaterialCounts() {
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (String state : states) counts.merge(state, 1, Integer::sum);
         return Collections.unmodifiableMap(counts);
+    }
+
+    public static String getBlockId(String state) {
+        int properties = state.indexOf('[');
+        return properties >= 0 ? state.substring(0, properties) : state;
+    }
+
+    public static boolean isAir(String state) {
+        String id = getBlockId(state);
+        return id.equals("minecraft:air") || id.equals("minecraft:cave_air") || id.equals("minecraft:void_air");
     }
 }
