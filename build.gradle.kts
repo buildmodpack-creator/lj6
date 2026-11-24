@@ -25,6 +25,7 @@ repositories {
 dependencies {
     // Fabric
     minecraft(libs.minecraft)
+    mappings(loom.officialMojangMappings())
     implementation(libs.fabric.loader)
 
     // Meteor
