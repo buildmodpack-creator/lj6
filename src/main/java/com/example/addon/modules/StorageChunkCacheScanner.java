@@ -242,7 +242,7 @@ public class StorageChunkCacheScanner extends Module {
             LevelChunkSection section = sections[sectionIndex];
             if (section == null || !section.maybeHas(StorageChunkCacheScanner::isInteresting)) continue;
 
-            int baseY = chunk.getMinBuildHeight() + (sectionIndex << 4);
+            int baseY = mc.level.getMinY() + (sectionIndex << 4);
             for (int localY = 0; localY < 16; localY++) {
                 int y = baseY + localY;
                 for (int localZ = 0; localZ < 16; localZ++) {
