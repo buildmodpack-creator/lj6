@@ -31,7 +31,7 @@ public class ParticleLimiter extends Module {
     );
 
     public ParticleLimiter() {
-        super(AddonTemplate.CATEGORY, "particle-limiter",
+        super(AddonTemplate.FIX_LAG_CATEGORY, "particle-limiter",
             "Caps live particle count and discards distant particles when they are spawned.");
         INSTANCE = this;
     }
@@ -46,7 +46,6 @@ public class ParticleLimiter extends Module {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return true;
-
         if (trackedParticleCount >= module.maxParticles.get()) return false;
 
         Vec3 cameraPos = mc.gameRenderer.getMainCamera().getPosition();
