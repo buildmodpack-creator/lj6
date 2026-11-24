@@ -47,8 +47,8 @@ public class ChunkVisual extends Module {
         int chunkX = Math.floorDiv(mc.player.getBlockX(), 16) * 16;
         int chunkZ = Math.floorDiv(mc.player.getBlockZ(), 16) * 16;
         int range = verticalRange.get();
-        double minY = Math.max(mc.level.getMinBuildHeight(), mc.player.getY() - range);
-        double maxY = Math.min(mc.level.getMaxBuildHeight(), mc.player.getY() + range);
+        double minY = Math.max(mc.level.getMinY(), mc.player.getY() - range);
+        double maxY = Math.min(mc.level.getMaxY(), mc.player.getY() + range);
 
         AABB bounds = new AABB(chunkX, minY, chunkZ, chunkX + 16, maxY, chunkZ + 16);
         SettingColor color = chunkColor.get();
