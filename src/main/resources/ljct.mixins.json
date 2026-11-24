@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.example.addon.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ScreenEffectRendererMixin",
+    "EntityRenderDispatcherMixin",
+    "ParticleEngineMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
