@@ -10,6 +10,7 @@ import com.example.addon.modules.EntityOutline;
 import com.example.addon.modules.CustomLowFire;
 import com.example.addon.modules.EntityCuller;
 import com.example.addon.modules.ParticleLimiter;
+import com.example.addon.modules.StorageChunkCacheScanner;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -39,6 +40,7 @@ public class AddonTemplate extends MeteorAddon {
         Modules.get().add(new CustomLowFire());
         Modules.get().add(new EntityCuller());
         Modules.get().add(new ParticleLimiter());
+        Modules.get().add(new StorageChunkCacheScanner());
 
         Commands.add(new CommandExample());
         Commands.add(new SchematicCommand());
