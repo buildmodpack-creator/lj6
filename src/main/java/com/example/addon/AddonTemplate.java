@@ -6,6 +6,7 @@ import com.example.addon.hud.HudExample;
 import com.example.addon.modules.BuildAssist;
 import com.example.addon.modules.AutoBlockSelect;
 import com.example.addon.modules.ChunkVisual;
+import com.example.addon.modules.EntityOutline;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -30,6 +31,7 @@ public class AddonTemplate extends MeteorAddon {
         Modules.get().add(new BuildAssist());
         Modules.get().add(new AutoBlockSelect());
         Modules.get().add(new ChunkVisual());
+        Modules.get().add(new EntityOutline());
 
         // Commands
         Commands.add(new CommandExample());
