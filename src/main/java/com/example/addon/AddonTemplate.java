@@ -1,6 +1,7 @@
 package com.example.addon;
 
 import com.example.addon.commands.CommandExample;
+import com.example.addon.commands.SchematicCommand;
 import com.example.addon.hud.HudExample;
 import com.example.addon.modules.BuildAssist;
 import com.mojang.logging.LogUtils;
@@ -27,6 +28,7 @@ public class AddonTemplate extends MeteorAddon {
 
         // Commands
         Commands.add(new CommandExample());
+        Commands.add(new SchematicCommand());
 
         // HUD
         Hud.get().register(HudExample.INFO);
