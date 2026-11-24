@@ -121,7 +121,8 @@ public class BuildAssist extends Module {
         SchematicData schematic = SchematicManager.getCurrent();
         if (schematic == null) return;
 
-        BlockPos origin = mc.player.blockPosition();
+        BlockPos origin = SchematicManager.getAnchor();
+        if (origin == null) origin = mc.player.blockPosition();
         int drawn = 0;
         int limit = previewLimit.get();
 
