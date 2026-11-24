@@ -7,18 +7,22 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import meteordevelopment.meteorclient.commands.Command;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientSuggestionProvider;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.BlockItem;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * Loads a Sponge .schem file from the game's schematics folder.
- * Only the named file in that folder can be opened.
+ * Loads and inspects a Sponge .schem file from the game's schematics folder.
+ * The command only reads files and inventory contents; it never places blocks.
  */
 public class SchematicCommand extends Command {
     private static final Pattern SAFE_FILE_NAME = Pattern.compile("[A-Za-z0-9._ -]+\\.schem");
@@ -52,7 +56,7 @@ public class SchematicCommand extends Command {
                         + schematic.getHeight() + " x " + schematic.getLength()
                         + " (" + schematic.getBlockCount() + " blocks).");
 
-                    schematic.getMaterialCounts().entrySet().stream()
+                    schematic.getRequiredMaterialCounts().entrySet().stream()
                         .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder()))
                         .limit(8)
                         .forEach(entry -> info(entry.getValue() + " x " + entry.getKey()));
@@ -72,6 +76,45 @@ public class SchematicCommand extends Command {
                     + schematic.getHeight() + " x " + schematic.getLength()
                     + " (" + schematic.getBlockCount() + " blocks).");
             }
+            return SINGLE_SUCCESS;
+        }));
+
+        builder.then(literal("materials").executes(context -> {
+            SchematicData schematic = SchematicManager.getCurrent();
+            Minecraft minecraft = Minecraft.getInstance();
+            if (schematic == null) {
+                info("No schematic loaded. Use .ljct-schem load filename.schem");
+                return SINGLE_SUCCESS;
+            }
+            if (minecraft.player == null) {
+                info("Open a world before checking inventory materials.");
+                return SINGLE_SUCCESS;
+            }
+
+            Map<String, Integer> inventory = new HashMap<>();
+            for (int slot = 0; slot < minecraft.player.getInventory().getContainerSize(); slot++) {
+                var stack = minecraft.player.getInventory().getItem(slot);
+                if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) continue;
+                String blockId = BuiltInRegistries.BLOCK.getKey(blockItem.getBlock()).toString();
+                inventory.merge(blockId, stack.getCount(), Integer::sum);
+            }
+
+            Map<String, Integer> required = schematic.getRequiredMaterialCounts();
+            int totalMissing = 0;
+            for (Map.Entry<String, Integer> entry : required.entrySet()) {
+                int have = inventory.getOrDefault(entry.getKey(), 0);
+                totalMissing += Math.max(0, entry.getValue() - have);
+            }
+
+            info("Material check: " + required.size() + " block types; " + totalMissing + " blocks still needed.");
+            required.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder()))
+                .limit(20)
+                .forEach(entry -> {
+                    int have = inventory.getOrDefault(entry.getKey(), 0);
+                    int missing = Math.max(0, entry.getValue() - have);
+                    info(entry.getKey() + " | need " + entry.getValue() + " | have " + have + " | missing " + missing);
+                });
             return SINGLE_SUCCESS;
         }));
 
