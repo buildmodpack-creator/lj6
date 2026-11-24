@@ -41,3 +41,8 @@ For local development, use Java 21 and run:
 ```
 
 Install the resulting JAR alongside the matching Meteor Client build in your Fabric mods folder.
+
+## Visual category
+
+- Registers a dedicated `Visual` category in the Meteor module GUI, separate from the `LJCT` builder category.
+- Cosmetic modules such as custom sky, player cosmetics, trails, and held-item appearance can be added to this category in follow-up changes. The category registration itself does not claim those effects are implemented yet.
