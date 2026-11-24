@@ -1,8 +1,8 @@
 package com.example.addon.modules;
 
 import com.example.addon.AddonTemplate;
-import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.game.GameLeftEvent;
+import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.BlockUpdateEvent;
 import meteordevelopment.meteorclient.events.world.ChunkDataEvent;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
@@ -15,23 +15,24 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.phys.AABB;
 
 import java.awt.Color;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * Event-driven scanner. Chunk contents are inspected only when chunk data arrives;
- * later block changes update one cached position. Rendering reads the cache only.
+ * Event-driven scanner. Chunk sections are inspected only when chunk data arrives;
+ * block updates patch one cached position. The render handler only reads cached data.
  */
 public class StorageChunkCacheScanner extends Module {
+    private static final Map<Block, Integer> BLOCK_WEIGHTS = createBlockWeights();
     private static volatile StorageChunkCacheScanner INSTANCE;
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
@@ -137,7 +138,7 @@ public class StorageChunkCacheScanner extends Module {
 
     public StorageChunkCacheScanner() {
         super(AddonTemplate.VISUAL_CATEGORY, "storage-chunk-cache-scanner",
-            "Caches storage/special blocks on chunk data and block updates, then scores unusual chunks.");
+            "Caches storage and special blocks on chunk data and block updates, then scores unusual chunks.");
         INSTANCE = this;
     }
 
@@ -156,15 +157,14 @@ public class StorageChunkCacheScanner extends Module {
     private void onBlockUpdate(BlockUpdateEvent event) {
         if (event == null || event.pos == null || event.newState == null) return;
 
-        long chunkKey = chunkKey(event.pos.getX() >> 4, event.pos.getZ() >> 4);
-        ChunkSnapshot snapshot = cache.get(chunkKey);
+        long key = chunkKey(event.pos.getX() >> 4, event.pos.getZ() >> 4);
+        ChunkSnapshot snapshot = cache.get(key);
         if (snapshot == null) return;
 
         long posKey = event.pos.asLong();
         int weight = classify(event.newState);
-        if (weight == 0) snapshot.markers.remove(posKey);
-        else snapshot.markers.put(posKey, new Marker(posKey, weight));
-        snapshot.recalculateScore();
+        if (weight == 0) snapshot.remove(posKey);
+        else snapshot.put(posKey, event.pos.getX(), event.pos.getY(), event.pos.getZ(), weight);
     }
 
     @EventHandler
@@ -185,23 +185,24 @@ public class StorageChunkCacheScanner extends Module {
         double playerX = mc.player.getX();
         double playerY = mc.player.getY();
         double playerZ = mc.player.getZ();
+        double chunkRenderRadius = maxDistance + 12.0;
+        double chunkRenderRadiusSq = chunkRenderRadius * chunkRenderRadius;
         SettingColor color = getRenderColor();
         int renderedMarkers = 0;
         int markerLimit = maxMarkersPerFrame.get();
+        boolean drawMarkers = showMarkers.get();
 
+        // This loop visits cached chunks/markers only. It never reads block states.
         for (Map.Entry<Long, ChunkSnapshot> entry : cache.entrySet()) {
             ChunkSnapshot snapshot = entry.getValue();
             if (snapshot.score < minScore.get()) continue;
 
-            int chunkX = (int) (long) entry.getKey();
-            int chunkZ = (int) (entry.getKey() >> 32);
-            double centerX = chunkX * 16.0 + 8.0;
-            double centerZ = chunkZ * 16.0 + 8.0;
-            double dx = centerX - playerX;
-            double dz = centerZ - playerZ;
-            double nearestChunkDistanceSq = dx * dx + dz * dz;
-            double renderRadius = maxDistance + 12.0;
-            if (nearestChunkDistanceSq > renderRadius * renderRadius) continue;
+            long key = entry.getKey();
+            int chunkX = (int) key;
+            int chunkZ = (int) (key >> 32);
+            double dx = chunkX * 16.0 + 8.0 - playerX;
+            double dz = chunkZ * 16.0 + 8.0 - playerZ;
+            if (dx * dx + dz * dz > chunkRenderRadiusSq) continue;
 
             AABB chunkBounds = new AABB(
                 chunkX * 16.0, lowY, chunkZ * 16.0,
@@ -209,20 +210,21 @@ public class StorageChunkCacheScanner extends Module {
             );
             event.renderer.box(chunkBounds, color, color, ShapeMode.Lines, 0);
 
-            if (!showMarkers.get() || renderedMarkers >= markerLimit) continue;
+            if (!drawMarkers || renderedMarkers >= markerLimit) continue;
             for (Marker marker : snapshot.markers.values()) {
                 if (renderedMarkers >= markerLimit) break;
-                BlockPos pos = BlockPos.of(marker.pos);
-                int y = pos.getY();
-                if (y < lowY || y > highY) continue;
+                if (marker.y < lowY || marker.y > highY) continue;
 
-                double bx = pos.getX() + 0.5 - playerX;
-                double by = pos.getY() + 0.5 - playerY;
-                double bz = pos.getZ() + 0.5 - playerZ;
+                double bx = marker.x + 0.5 - playerX;
+                double by = marker.y + 0.5 - playerY;
+                double bz = marker.z + 0.5 - playerZ;
                 if (bx * bx + by * by + bz * bz > maxDistanceSq) continue;
 
-                AABB blockBounds = new AABB(pos).inflate(0.002);
-                event.renderer.box(blockBounds, color, color, ShapeMode.Lines, 0);
+                AABB bounds = new AABB(
+                    marker.x, marker.y, marker.z,
+                    marker.x + 1.0, marker.y + 1.0, marker.z + 1.0
+                ).inflate(0.002);
+                event.renderer.box(bounds, color, color, ShapeMode.Lines, 0);
                 renderedMarkers++;
             }
         }
@@ -232,17 +234,32 @@ public class StorageChunkCacheScanner extends Module {
         int chunkX = chunk.getPos().x;
         int chunkZ = chunk.getPos().z;
         ChunkSnapshot snapshot = new ChunkSnapshot();
+        LevelChunkSection[] sections = chunk.getSections();
 
-        // Block-entity positions are the compact candidate list; no 16x16xheight block scan.
-        for (BlockPos pos : chunk.getBlockEntities().keySet()) {
-            int weight = classify(chunk.getBlockState(pos));
-            if (weight != 0) {
-                long posKey = pos.asLong();
-                snapshot.markers.put(posKey, new Marker(posKey, weight));
+        // Palette pre-check avoids scanning empty/unrelated sections. Only sections
+        // whose palette contains a target block are inspected (once, on chunk data).
+        for (int sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+            LevelChunkSection section = sections[sectionIndex];
+            if (section == null || !section.maybeHas(StorageChunkCacheScanner::isInteresting)) continue;
+
+            int baseY = (chunk.getMinSection() + sectionIndex) << 4;
+            for (int localY = 0; localY < 16; localY++) {
+                int y = baseY + localY;
+                for (int localZ = 0; localZ < 16; localZ++) {
+                    for (int localX = 0; localX < 16; localX++) {
+                        BlockState state = section.getBlockState(localX, localY, localZ);
+                        int weight = classify(state);
+                        if (weight == 0) continue;
+
+                        int x = (chunkX << 4) + localX;
+                        int z = (chunkZ << 4) + localZ;
+                        long posKey = BlockPos.asLong(x, y, z);
+                        snapshot.put(posKey, x, y, z, weight);
+                    }
+                }
             }
         }
 
-        snapshot.recalculateScore();
         cache.put(chunkKey(chunkX, chunkZ), snapshot);
     }
 
@@ -254,21 +271,37 @@ public class StorageChunkCacheScanner extends Module {
         return new SettingColor((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255, alpha.get());
     }
 
+    private static boolean isInteresting(BlockState state) {
+        return BLOCK_WEIGHTS.containsKey(state.getBlock());
+    }
+
     private static int classify(BlockState state) {
-        String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
-        return switch (id) {
-            case "chest", "trapped_chest", "barrel", "ender_chest" -> 5;
-            case "shulker_box", "white_shulker_box", "orange_shulker_box", "magenta_shulker_box",
-                 "light_blue_shulker_box", "yellow_shulker_box", "lime_shulker_box", "pink_shulker_box",
-                 "gray_shulker_box", "light_gray_shulker_box", "cyan_shulker_box", "purple_shulker_box",
-                 "blue_shulker_box", "brown_shulker_box", "green_shulker_box", "red_shulker_box",
-                 "black_shulker_box" -> 6;
-            case "hopper", "dispenser", "dropper", "crafter" -> 4;
-            case "furnace", "smoker", "blast_furnace", "brewing_stand", "lectern" -> 2;
-            case "spawner", "trial_spawner", "vault", "beacon", "conduit",
-                 "command_block", "chain_command_block", "repeating_command_block" -> 8;
-            default -> 0;
-        };
+        return BLOCK_WEIGHTS.getOrDefault(state.getBlock(), 0);
+    }
+
+    private static Map<Block, Integer> createBlockWeights() {
+        Map<Block, Integer> weights = new HashMap<>();
+        add(weights, 5, Blocks.CHEST, Blocks.TRAPPED_CHEST, Blocks.BARREL, Blocks.ENDER_CHEST);
+        add(weights, 6,
+            Blocks.WHITE_SHULKER_BOX, Blocks.ORANGE_SHULKER_BOX, Blocks.MAGENTA_SHULKER_BOX,
+            Blocks.LIGHT_BLUE_SHULKER_BOX, Blocks.YELLOW_SHULKER_BOX, Blocks.LIME_SHULKER_BOX,
+            Blocks.PINK_SHULKER_BOX, Blocks.GRAY_SHULKER_BOX, Blocks.LIGHT_GRAY_SHULKER_BOX,
+            Blocks.CYAN_SHULKER_BOX, Blocks.PURPLE_SHULKER_BOX, Blocks.BLUE_SHULKER_BOX,
+            Blocks.BROWN_SHULKER_BOX, Blocks.GREEN_SHULKER_BOX, Blocks.RED_SHULKER_BOX,
+            Blocks.BLACK_SHULKER_BOX
+        );
+        add(weights, 4, Blocks.HOPPER, Blocks.DISPENSER, Blocks.DROPPER, Blocks.CRAFTER);
+        add(weights, 2, Blocks.FURNACE, Blocks.SMOKER, Blocks.BLAST_FURNACE, Blocks.BREWING_STAND, Blocks.LECTERN);
+        add(weights, 8,
+            Blocks.SPAWNER, Blocks.TRIAL_SPAWNER, Blocks.VAULT, Blocks.BEACON, Blocks.CONDUIT,
+            Blocks.COMMAND_BLOCK, Blocks.CHAIN_COMMAND_BLOCK, Blocks.REPEATING_COMMAND_BLOCK,
+            Blocks.STRUCTURE_BLOCK, Blocks.JIGSAW
+        );
+        return Map.copyOf(weights);
+    }
+
+    private static void add(Map<Block, Integer> weights, int weight, Block... blocks) {
+        for (Block block : blocks) weights.put(block, weight);
     }
 
     private static long chunkKey(int x, int z) {
@@ -283,22 +316,39 @@ public class StorageChunkCacheScanner extends Module {
     }
 
     private static final class Marker {
-        private final long pos;
+        private final int x;
+        private final int y;
+        private final int z;
         private final int weight;
 
-        private Marker(long pos, int weight) {
-            this.pos = pos;
+        private Marker(int x, int y, int z, int weight) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
             this.weight = weight;
         }
     }
 
     private static final class ChunkSnapshot {
         private final Map<Long, Marker> markers = new HashMap<>();
+        private int totalWeight;
         private int score;
 
-        private void recalculateScore() {
-            int totalWeight = 0;
-            for (Marker marker : markers.values()) totalWeight += marker.weight;
+        private void put(long key, int x, int y, int z, int weight) {
+            Marker previous = markers.put(key, new Marker(x, y, z, weight));
+            if (previous != null) totalWeight -= previous.weight;
+            totalWeight += weight;
+            updateScore();
+        }
+
+        private void remove(long key) {
+            Marker previous = markers.remove(key);
+            if (previous == null) return;
+            totalWeight -= previous.weight;
+            updateScore();
+        }
+
+        private void updateScore() {
             score = Math.min(100, totalWeight * 4 + Math.max(0, markers.size() - 2) * 3);
         }
     }
