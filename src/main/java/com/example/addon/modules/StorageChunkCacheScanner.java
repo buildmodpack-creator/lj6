@@ -187,45 +187,50 @@ public class StorageChunkCacheScanner extends Module {
         double playerZ = mc.player.getZ();
         double chunkRenderRadius = maxDistance + 12.0;
         double chunkRenderRadiusSq = chunkRenderRadius * chunkRenderRadius;
+
+        // Probe only chunk keys inside the render radius instead of iterating the
+        // entire cache every frame. No block states are read in this render path.
+        int playerChunkX = Math.floorDiv(mc.player.getBlockX(), 16);
+        int playerChunkZ = Math.floorDiv(mc.player.getBlockZ(), 16);
+        int chunkRadius = (int) Math.ceil(chunkRenderRadius / 16.0);
+        int requiredScore = minScore.get();
         SettingColor color = getRenderColor();
         int renderedMarkers = 0;
         int markerLimit = maxMarkersPerFrame.get();
         boolean drawMarkers = showMarkers.get();
 
-        // This loop visits cached chunks/markers only. It never reads block states.
-        for (Map.Entry<Long, ChunkSnapshot> entry : cache.entrySet()) {
-            ChunkSnapshot snapshot = entry.getValue();
-            if (snapshot.score < minScore.get()) continue;
+        for (int chunkX = playerChunkX - chunkRadius; chunkX <= playerChunkX + chunkRadius; chunkX++) {
+            for (int chunkZ = playerChunkZ - chunkRadius; chunkZ <= playerChunkZ + chunkRadius; chunkZ++) {
+                double dx = chunkX * 16.0 + 8.0 - playerX;
+                double dz = chunkZ * 16.0 + 8.0 - playerZ;
+                if (dx * dx + dz * dz > chunkRenderRadiusSq) continue;
 
-            long key = entry.getKey();
-            int chunkX = (int) key;
-            int chunkZ = (int) (key >> 32);
-            double dx = chunkX * 16.0 + 8.0 - playerX;
-            double dz = chunkZ * 16.0 + 8.0 - playerZ;
-            if (dx * dx + dz * dz > chunkRenderRadiusSq) continue;
+                ChunkSnapshot snapshot = cache.get(chunkKey(chunkX, chunkZ));
+                if (snapshot == null || snapshot.score < requiredScore) continue;
 
-            AABB chunkBounds = new AABB(
-                chunkX * 16.0, lowY, chunkZ * 16.0,
-                chunkX * 16.0 + 16.0, highY + 1.0, chunkZ * 16.0 + 16.0
-            );
-            event.renderer.box(chunkBounds, color, color, ShapeMode.Lines, 0);
+                AABB chunkBounds = new AABB(
+                    chunkX * 16.0, lowY, chunkZ * 16.0,
+                    chunkX * 16.0 + 16.0, highY + 1.0, chunkZ * 16.0 + 16.0
+                );
+                event.renderer.box(chunkBounds, color, color, ShapeMode.Lines, 0);
 
-            if (!drawMarkers || renderedMarkers >= markerLimit) continue;
-            for (Marker marker : snapshot.markers.values()) {
-                if (renderedMarkers >= markerLimit) break;
-                if (marker.y < lowY || marker.y > highY) continue;
+                if (!drawMarkers || renderedMarkers >= markerLimit) continue;
+                for (Marker marker : snapshot.markers.values()) {
+                    if (renderedMarkers >= markerLimit) break;
+                    if (marker.y < lowY || marker.y > highY) continue;
 
-                double bx = marker.x + 0.5 - playerX;
-                double by = marker.y + 0.5 - playerY;
-                double bz = marker.z + 0.5 - playerZ;
-                if (bx * bx + by * by + bz * bz > maxDistanceSq) continue;
+                    double bx = marker.x + 0.5 - playerX;
+                    double by = marker.y + 0.5 - playerY;
+                    double bz = marker.z + 0.5 - playerZ;
+                    if (bx * bx + by * by + bz * bz > maxDistanceSq) continue;
 
-                AABB bounds = new AABB(
-                    marker.x, marker.y, marker.z,
-                    marker.x + 1.0, marker.y + 1.0, marker.z + 1.0
-                ).inflate(0.002);
-                event.renderer.box(bounds, color, color, ShapeMode.Lines, 0);
-                renderedMarkers++;
+                    AABB bounds = new AABB(
+                        marker.x, marker.y, marker.z,
+                        marker.x + 1.0, marker.y + 1.0, marker.z + 1.0
+                    ).inflate(0.002);
+                    event.renderer.box(bounds, color, color, ShapeMode.Lines, 0);
+                    renderedMarkers++;
+                }
             }
         }
     }
