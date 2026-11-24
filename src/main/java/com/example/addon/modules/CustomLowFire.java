@@ -77,34 +77,16 @@ public class CustomLowFire extends Module {
         return INSTANCE == null ? 0.0f : INSTANCE.lowerOffset.get().floatValue();
     }
 
-    public static float getRed() {
-        return channel(0);
-    }
+    public static int getTintRgb() {
+        if (INSTANCE == null) return 0xFFFFFF;
+        SettingColor c = INSTANCE.tint.get();
+        if (!INSTANCE.chroma.get()) return (c.r << 16) | (c.g << 8) | c.b;
 
-    public static float getGreen() {
-        return channel(1);
-    }
-
-    public static float getBlue() {
-        return channel(2);
+        float hue = ((System.currentTimeMillis() * INSTANCE.chromaSpeed.get()) % 10000L) / 10000.0f;
+        return Color.HSBtoRGB(hue, 0.9f, 1.0f) & 0xFFFFFF;
     }
 
     public static float getAlpha() {
         return INSTANCE == null ? 1.0f : INSTANCE.alpha.get() / 255.0f;
-    }
-
-    private static float channel(int index) {
-        if (INSTANCE == null) return 1.0f;
-        SettingColor c = INSTANCE.tint.get();
-        if (INSTANCE.chroma.get()) {
-            float hue = ((System.currentTimeMillis() * INSTANCE.chromaSpeed.get()) % 10000L) / 10000.0f;
-            int rgb = Color.HSBtoRGB(hue, 0.9f, 1.0f);
-            return ((rgb >> (16 - index * 8)) & 255) / 255.0f;
-        }
-        return switch (index) {
-            case 0 -> c.r / 255.0f;
-            case 1 -> c.g / 255.0f;
-            default -> c.b / 255.0f;
-        };
     }
 }
