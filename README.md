@@ -11,6 +11,7 @@ LJCT is a Meteor Client addon project targeting Minecraft 1.21.4 and Java 21.
 - This is a visual aid; movement and block placement remain under player control.
 - Optional schematic outline preview is available after loading a `.schem` file. It starts at the player's block position; enable `schematic-preview` in Build Assist settings.
 - `preview-block-limit` defaults to 256 to reduce rendering cost on mobile devices.
+- With `compare-world` enabled, matching blocks use the normal schematic color, missing blocks use green, and different block types use red. Comparison is by block ID; block-state properties such as facing or rotation are not checked.
 
 ### Schematic reader
 - Reads Sponge schematic v2 and v3 `.schem` files.
@@ -22,6 +23,7 @@ LJCT is a Meteor Client addon project targeting Minecraft 1.21.4 and Java 21.
 Put a `.schem` file in the game's `schematics` folder, then use:
 - `.ljct-schem load filename.schem` — load and summarize a schematic.
 - `.ljct-schem info` — show the currently loaded schematic dimensions.
+- `.ljct-schem materials` — compare required block counts with block items in the player's inventory (read-only).
 - `.ljct-schem clear` — clear the in-memory schematic.
 
 The command creates the `schematics` folder beside the game's normal `mods` and `config` folders if it does not exist.
