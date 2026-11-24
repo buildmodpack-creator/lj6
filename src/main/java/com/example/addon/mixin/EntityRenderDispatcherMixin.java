@@ -12,10 +12,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(EntityRenderDispatcher.class)
 public abstract class EntityRenderDispatcherMixin {
     @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
-    private <E extends Entity> void ljct$cullDistantAndOffView(
-        E entity, Frustum frustum, double x, double y, double z,
+    private <E extends Entity> void ljct$cullDistant(
+        E entity, Frustum frustum, double cameraX, double cameraY, double cameraZ,
         CallbackInfoReturnable<Boolean> cir
     ) {
-        if (EntityCuller.shouldCull(entity)) cir.setReturnValue(false);
+        if (EntityCuller.shouldCull(entity, cameraX, cameraY, cameraZ)) cir.setReturnValue(false);
     }
 }
