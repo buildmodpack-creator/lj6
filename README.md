@@ -24,9 +24,11 @@ Put a `.schem` file in the game's `schematics` folder, then use:
 - `.ljct-schem load filename.schem` — load and summarize a schematic.
 - `.ljct-schem info` — show the currently loaded schematic dimensions.
 - `.ljct-schem materials` — compare required block counts with block items in the player's inventory (read-only).
+- `.ljct-schem anchor` — set the schematic origin to your current block position.
+- `.ljct-schem origin` — show the saved origin. Without an anchor, the preview follows the player's position.
 - `.ljct-schem clear` — clear the in-memory schematic.
 
-The command creates the `schematics` folder beside the game's normal `mods` and `config` folders if it does not exist.
+The command creates the `schematics` folder beside the game's normal `mods` and `config` folders if it does not exist. After loading, stand at the intended bottom-corner origin and run `.ljct-schem anchor` before enabling the preview.
 
 ## Build
 
