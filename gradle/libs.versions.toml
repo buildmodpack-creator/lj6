@@ -4,7 +4,7 @@ jdk = "21"
 minecraft = "1.21.4"
 fabric-loader = "0.16.14"
 loom = "1.9.2"
-meteor = "1.21.4-SNAPSHOT"
+meteor = "1.21.4"
 
 [libraries]
 minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
