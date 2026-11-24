@@ -96,6 +96,14 @@ public class BuildAssist extends Module {
         .build()
     );
 
+    private final Setting<SettingColor> wrongStateColor = sgGeneral.add(new ColorSetting.Builder()
+        .name("wrong-state-color")
+        .description("Yellow marks the right block type with incorrect orientation or block-state properties.")
+        .defaultValue(new SettingColor(255, 210, 45, 170))
+        .visible(() -> showSchematicPreview.get() && compareWorld.get())
+        .build()
+    );
+
     public BuildAssist() {
         super(AddonTemplate.CATEGORY, "build-assist", "Highlights targets and compares a loaded schematic with the world.");
     }
@@ -143,6 +151,8 @@ public class BuildAssist extends Module {
                             String actualId = BuiltInRegistries.BLOCK.getKey(actualState.getBlock()).toString();
                             if (!actualId.equals(SchematicData.getBlockId(expectedState))) {
                                 color = wrongColor.get();
+                            } else if (!hasMatchingBlockState(actualState.toString(), expectedState)) {
+                                color = wrongStateColor.get();
                             }
                         }
                     }
@@ -152,5 +162,21 @@ public class BuildAssist extends Module {
                 }
             }
         }
+    }
+
+    /**
+     * Compares serialized block-state properties, such as facing, axis, half,
+     * rotation, and redstone connection flags. Block IDs are checked separately.
+     */
+    private static boolean hasMatchingBlockState(String actualState, String expectedState) {
+        return normalizeState(actualState).equals(normalizeState(expectedState));
+    }
+
+    private static String normalizeState(String state) {
+        int propertiesStart = state.indexOf('[');
+        if (propertiesStart < 0) return "";
+        int propertiesEnd = state.lastIndexOf(']');
+        if (propertiesEnd < propertiesStart) return state.substring(propertiesStart);
+        return state.substring(propertiesStart + 1, propertiesEnd);
     }
 }
