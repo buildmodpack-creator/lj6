@@ -50,7 +50,9 @@ public class EntityCuller extends Module {
         if (lengthSquared > maxDistance * maxDistance) return true;
         if (lengthSquared < 1.0E-6 || module.viewAngle.get() >= 360) return false;
 
-        double dot = toEntity.normalize().dot(camera.getLookVector());
+        var look = camera.getLookVector();
+        Vec3 lookDirection = new Vec3(look.x(), look.y(), look.z());
+        double dot = toEntity.normalize().dot(lookDirection);
         double threshold = Math.cos(Math.toRadians(module.viewAngle.get() * 0.5));
         return dot < threshold;
     }
