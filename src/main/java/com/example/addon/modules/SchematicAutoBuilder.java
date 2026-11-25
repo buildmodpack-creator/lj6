@@ -74,7 +74,7 @@ public class SchematicAutoBuilder extends Module {
         while(actions<blocksPerTick.get()&&cursor<targets.size()){
             BuildTarget target=targets.get(cursor);
             var existing=mc.level.getBlockState(target.pos);
-            if(BuiltInRegistries.BLOCK.getKey(existing.getBlock()).toString().equals(SchematicData.getBlockId(target.state))){cursor++;continue;}
+            if(BuiltInRegistries.BLOCK.getKey(existing.getBlock()).toString().equals(SchematicData.getBlockId(target.state))){cursor++;placed++;updateHud();continue;}
             if(!mc.level.hasChunkAt(target.pos)){status="Waiting for chunk";updateHud();return;}
             if(!existing.isAir()&&!existing.canBeReplaced()){status="Blocked at "+target.pos.toShortString();updateHud();return;}
             if(mc.player.distanceToSqr(Vec3.atCenterOf(target.pos))>range.get()*range.get()){status="Out of range";updateHud();return;}
