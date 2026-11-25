@@ -28,7 +28,8 @@ import java.util.Iterator;
 import java.util.Map;
 
 /** Event-driven construction-density scoring. Render reads cached scores only. */
-public class SusChunkDetector extends Module {\n    public static volatile String hudText = "Sus chunks: waiting for chunk data";
+public class SusChunkDetector extends Module {
+    public static volatile String hudText = "Sus chunks: waiting for chunk data";
     private final SettingGroup sg = settings.getDefaultGroup();
     private final Setting<Integer> distance = sg.add(new IntSetting.Builder().name("distance").defaultValue(96).range(16, 192).build());
     private final Setting<Integer> planeY = sg.add(new IntSetting.Builder().name("outline-y").description("Y plane used for the chunk outline.").defaultValue(64).range(-64, 320).build());
