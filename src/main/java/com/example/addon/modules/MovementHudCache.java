@@ -31,6 +31,11 @@ public class MovementHudCache extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
+        updateCache();
+    }
+
+    /** Also called by the HUD element so it works without requiring this helper module to be enabled. */
+    public static void updateCache() {
         if (mc.player == null || mc.level == null) {
             clear();
             return;
@@ -41,7 +46,7 @@ public class MovementHudCache extends Module {
         double verticalSpeed = velocity.y * 20.0;
 
         StringBuilder first = new StringBuilder(40);
-        first.append("Move ").append(tenths(horizontalSpeed)).append(" m/s  |  Y ")
+        first.append("Speed ").append(tenths(horizontalSpeed)).append(" b/s  |  Y ")
             .append(signedTenths(verticalSpeed));
 
         StringBuilder second = new StringBuilder(72);
