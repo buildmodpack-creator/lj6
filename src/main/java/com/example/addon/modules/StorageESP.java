@@ -17,6 +17,9 @@ import java.util.List;
 public class StorageESP extends Module {
     private final SettingGroup sg = settings.getDefaultGroup();
     private final Setting<Integer> range = sg.add(new IntSetting.Builder().name("range").defaultValue(64).range(8, 128).build());
+    private final Setting<Integer> renderLimit = sg.add(new IntSetting.Builder().name("render-limit")
+        .description("Maximum cached storage markers drawn per frame; lower values are smoother on mobile.")
+        .defaultValue(192).range(16, 384).build());
     private final Setting<Boolean> chest = bool("chest", true);
     private final Setting<Boolean> shulker = bool("shulker-box", true);
     private final Setting<Boolean> barrel = bool("barrel", true);
@@ -31,7 +34,8 @@ public class StorageESP extends Module {
     private final Setting<SettingColor> furnaceColor = color("furnace-color", 255, 110, 75);
 
     public StorageESP() {
-        super(AddonTemplate.VISUAL_CATEGORY, "storage-esp", "Highlights cached storage blocks. Requires Storage Chunk Cache Scanner to be active.");
+        super(AddonTemplate.VISUAL_CATEGORY, "storage-esp",
+            "Draws cached storage boxes with the normal 3D shape renderer; does not use Meteor's post-process outline shader.");
     }
     private Setting<Boolean> bool(String name, boolean value) {
         return sg.add(new BoolSetting.Builder().name(name).defaultValue(value).build());
@@ -40,9 +44,9 @@ public class StorageESP extends Module {
         return sg.add(new ColorSetting.Builder().name(name).defaultValue(new SettingColor(r, g, b, 190)).build());
     }
     @EventHandler private void onRender(Render3DEvent event) {
-        if (mc.player == null || mc.level == null) return;
+        if (mc.player == null || mc.level == null || !StorageChunkCacheScanner.isAvailable()) return;
         List<StorageChunkCacheScanner.CachedBlock> blocks = StorageChunkCacheScanner.getCachedBlocks(
-            mc.player.getX(), mc.player.getY(), mc.player.getZ(), range.get(), 384);
+            mc.player.getX(), mc.player.getY(), mc.player.getZ(), range.get(), renderLimit.get());
         for (var block : blocks) {
             SettingColor c = colorFor(block.blockId());
             if (c == null) continue;
