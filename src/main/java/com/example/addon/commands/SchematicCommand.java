@@ -11,7 +11,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.BlockItem;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,132 +19,62 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-/**
- * Loads and inspects a Sponge .schem file from the game's schematics folder.
- * The command only reads files and inventory contents; it never places blocks.
- */
+/** Loads Sponge and Litematica blueprints from the game schematics folder. */
 public class SchematicCommand extends Command {
-    private static final Pattern SAFE_FILE_NAME = Pattern.compile("[A-Za-z0-9._ -]+\\.schem");
+    private static final Pattern SAFE_FILE_NAME = Pattern.compile("[A-Za-z0-9._ -]+\\.(schem|litematic)", Pattern.CASE_INSENSITIVE);
 
-    public SchematicCommand() {
-        super("ljct-schem", "Loads and inspects a Sponge .schem blueprint.");
-    }
+    public SchematicCommand() { super("ljct-schem", "Loads and inspects a .schem or .litematic blueprint."); }
 
     @Override
     public void build(LiteralArgumentBuilder<SharedSuggestionProvider> builder) {
-        builder.then(literal("load")
-            .then(argument("file", StringArgumentType.greedyString()).executes(context -> {
-                String fileName = StringArgumentType.getString(context, "file").trim();
-                if (!SAFE_FILE_NAME.matcher(fileName).matches() || fileName.equals(".schem")) {
-                    info("Invalid filename. Use a .schem filename without folders.");
-                    return SINGLE_SUCCESS;
-                }
-
-                Path folder = FabricLoader.getInstance().getGameDir().resolve("schematics");
-                try {
-                    Files.createDirectories(folder);
-                    Path file = folder.resolve(fileName).normalize();
-                    if (!file.getParent().equals(folder.normalize()) || !Files.isRegularFile(file)) {
-                        info("File not found. Put the .schem file in: " + folder.toAbsolutePath());
-                        return SINGLE_SUCCESS;
-                    }
-
-                    SchematicData schematic = SchematicReader.read(file);
-                    SchematicManager.setCurrent(schematic);
-                    info("Loaded " + fileName + ": " + schematic.getWidth() + " x "
-                        + schematic.getHeight() + " x " + schematic.getLength()
-                        + " (" + schematic.getBlockCount() + " blocks).");
-
-                    schematic.getRequiredMaterialCounts().entrySet().stream()
-                        .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder()))
-                        .limit(8)
-                        .forEach(entry -> info(entry.getValue() + " x " + entry.getKey()));
-                } catch (IOException | RuntimeException exception) {
-                    info("Could not load schematic: " + exception.getMessage());
-                }
-                return SINGLE_SUCCESS;
-            }))
-        );
+        builder.then(literal("load").then(argument("file", StringArgumentType.greedyString()).executes(context -> {
+            String name=StringArgumentType.getString(context,"file").trim();
+            if(!SAFE_FILE_NAME.matcher(name).matches()){info("Use a .schem or .litematic filename without folders.");return SINGLE_SUCCESS;}
+            Path folder=FabricLoader.getInstance().getGameDir().resolve("schematics");
+            try {
+                Files.createDirectories(folder);
+                Path file=folder.resolve(name).normalize();
+                if(!file.getParent().equals(folder.normalize())||!Files.isRegularFile(file)){info("File not found in: "+folder.toAbsolutePath());return SINGLE_SUCCESS;}
+                SchematicData data=SchematicReader.read(file);
+                SchematicManager.setCurrent(data);
+                info("Loaded "+name+": "+data.getWidth()+" x "+data.getHeight()+" x "+data.getLength()+" ("+data.getBlockCount()+" cells).");
+                data.getRequiredMaterialCounts().entrySet().stream().sorted(Map.Entry.<String,Integer>comparingByValue(Comparator.reverseOrder())).limit(8).forEach(e->info(e.getValue()+" x "+e.getKey()));
+            } catch(IOException|RuntimeException e){info("Could not load schematic: "+e.getMessage());}
+            return SINGLE_SUCCESS;
+        })));
 
         builder.then(literal("info").executes(context -> {
-            SchematicData schematic = SchematicManager.getCurrent();
-            if (schematic == null) {
-                info("No schematic loaded. Use .ljct-schem load filename.schem");
-            } else {
-                info("Current schematic: " + schematic.getWidth() + " x "
-                    + schematic.getHeight() + " x " + schematic.getLength()
-                    + " (" + schematic.getBlockCount() + " blocks).");
-            }
+            SchematicData d=SchematicManager.getCurrent();
+            if(d==null)info("No schematic loaded. Use .ljct-schem load filename.litematic");
+            else info("Loaded: "+d.getWidth()+" x "+d.getHeight()+" x "+d.getLength()+" ("+d.getBlockCount()+" cells).");
             return SINGLE_SUCCESS;
         }));
-
         builder.then(literal("materials").executes(context -> {
-            SchematicData schematic = SchematicManager.getCurrent();
-            Minecraft minecraft = Minecraft.getInstance();
-            if (schematic == null) {
-                info("No schematic loaded. Use .ljct-schem load filename.schem");
-                return SINGLE_SUCCESS;
+            SchematicData d=SchematicManager.getCurrent(); Minecraft mc=Minecraft.getInstance();
+            if(d==null||mc.player==null){info("Load a schematic and enter a world first.");return SINGLE_SUCCESS;}
+            Map<String,Integer> inventory=new HashMap<>();
+            for(int i=0;i<mc.player.getInventory().getContainerSize();i++){
+                var stack=mc.player.getInventory().getItem(i);
+                if(!stack.isEmpty()&&stack.getItem() instanceof BlockItem item)inventory.merge(BuiltInRegistries.BLOCK.getKey(item.getBlock()).toString(),stack.getCount(),Integer::sum);
             }
-            if (minecraft.player == null) {
-                info("Open a world before checking inventory materials.");
-                return SINGLE_SUCCESS;
-            }
-
-            Map<String, Integer> inventory = new HashMap<>();
-            for (int slot = 0; slot < minecraft.player.getInventory().getContainerSize(); slot++) {
-                var stack = minecraft.player.getInventory().getItem(slot);
-                if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem blockItem)) continue;
-                String blockId = BuiltInRegistries.BLOCK.getKey(blockItem.getBlock()).toString();
-                inventory.merge(blockId, stack.getCount(), Integer::sum);
-            }
-
-            Map<String, Integer> required = schematic.getRequiredMaterialCounts();
-            int totalMissing = 0;
-            for (Map.Entry<String, Integer> entry : required.entrySet()) {
-                int have = inventory.getOrDefault(entry.getKey(), 0);
-                totalMissing += Math.max(0, entry.getValue() - have);
-            }
-
-            info("Material check: " + required.size() + " block types; " + totalMissing + " blocks still needed.");
-            required.entrySet().stream()
-                .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder()))
-                .limit(20)
-                .forEach(entry -> {
-                    int have = inventory.getOrDefault(entry.getKey(), 0);
-                    int missing = Math.max(0, entry.getValue() - have);
-                    info(entry.getKey() + " | need " + entry.getValue() + " | have " + have + " | missing " + missing);
-                });
+            int missing=0;
+            for(var e:d.getRequiredMaterialCounts().entrySet())missing+=Math.max(0,e.getValue()-inventory.getOrDefault(e.getKey(),0));
+            info("Material check: "+missing+" blocks missing across "+d.getRequiredMaterialCounts().size()+" block types.");
             return SINGLE_SUCCESS;
         }));
-
-
         builder.then(literal("anchor").executes(context -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (SchematicManager.getCurrent() == null) {
-                info("Load a schematic first.");
-            } else if (minecraft.player == null) {
-                info("Open a world before setting the schematic anchor.");
-            } else {
-                SchematicManager.setAnchor(minecraft.player.blockPosition());
-                info("Schematic origin set to your current block position.");
-            }
+            Minecraft mc=Minecraft.getInstance();
+            if(dMissing())info("Load a schematic first.");
+            else if(mc.player==null)info("Enter a world first.");
+            else {SchematicManager.setAnchor(mc.player.blockPosition());info("Origin anchored at your current block position.");}
             return SINGLE_SUCCESS;
         }));
-
         builder.then(literal("origin").executes(context -> {
-            var anchor = SchematicManager.getAnchor();
-            if (anchor == null) {
-                info("No fixed origin. Preview follows your current block position.");
-            } else {
-                info("Schematic origin: " + anchor.getX() + ", " + anchor.getY() + ", " + anchor.getZ());
-            }
+            var p=SchematicManager.getAnchor();
+            info(p==null?"No fixed origin; builder uses your current block position.":"Origin: "+p.getX()+", "+p.getY()+", "+p.getZ());
             return SINGLE_SUCCESS;
         }));
-
-        builder.then(literal("clear").executes(context -> {
-            SchematicManager.clear();
-            info("Cleared the loaded schematic.");
-            return SINGLE_SUCCESS;
-        }));
+        builder.then(literal("clear").executes(context -> {SchematicManager.clear();info("Cleared schematic.");return SINGLE_SUCCESS;}));
     }
+    private static boolean dMissing(){return SchematicManager.getCurrent()==null;}
 }
