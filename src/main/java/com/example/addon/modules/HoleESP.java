@@ -13,7 +13,6 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +26,11 @@ public class HoleESP extends Module {
     private final Setting<SettingColor> obsidianColor = sg.add(new ColorSetting.Builder().name("obsidian-color").defaultValue(new SettingColor(150, 70, 255, 190)).build());
     private final Setting<SettingColor> bedrockColor = sg.add(new ColorSetting.Builder().name("bedrock-color").defaultValue(new SettingColor(80, 220, 255, 190)).build());
     private final List<Hole> holes = new ArrayList<>();
-    public HoleESP() { super(AddonTemplate.VISUAL_CATEGORY, "hole-esp", "Finds nearby 1x2 holes using cached obsidian/bedrock candidates; checks are throttled to every 5 ticks."); }
+    public HoleESP() {
+        // "hole-esp" is already registered by Meteor Client.
+        super(AddonTemplate.VISUAL_CATEGORY, "ljct-hole-esp",
+            "Finds nearby 1x2 holes using cached obsidian/bedrock candidates; checks are throttled to every 5 ticks.");
+    }
     @Override public void onDeactivate() { holes.clear(); }
     @EventHandler private void onTick(TickEvent.Pre event) {
         if (mc.player == null || mc.level == null || mc.player.tickCount % 5 != 0) return;
@@ -43,11 +46,12 @@ public class HoleESP extends Module {
         }
     }
     @EventHandler private void onRender(Render3DEvent event) {
+        if (mc.player == null || mc.level == null) return;
         for (Hole h : holes) {
             SettingColor c = h.bedrock ? bedrockColor.get() : obsidianColor.get();
             event.renderer.box(new AABB(h.pos.getX(), h.pos.getY()+1, h.pos.getZ(), h.pos.getX()+1, h.pos.getY()+3, h.pos.getZ()+1), c, c, ShapeMode.Lines, 0);
         }
     }
-    private boolean isWall(BlockPos pos) { return !mc.level.getBlockState(pos).isAir(); }
+    private boolean isWall(BlockPos pos) { return mc.level != null && !mc.level.getBlockState(pos).isAir(); }
     private record Hole(BlockPos pos, boolean bedrock) {}
 }
