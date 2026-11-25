@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -33,7 +34,7 @@ public class SusChunkDetector extends Module {
     private final SettingGroup sg = settings.getDefaultGroup();
     private final Setting<Integer> distance = sg.add(new IntSetting.Builder().name("distance").defaultValue(128).range(16, 256).build());
     private final Setting<Integer> planeY = sg.add(new IntSetting.Builder().name("outline-y").defaultValue(64).range(-64, 320).build());
-    private final Setting<Integer> threshold = sg.add(new IntSetting.Builder().name("minimum-score").defaultValue(5).range(1, 100).build());
+    private final Setting<Integer> threshold = sg.add(new IntSetting.Builder().name("minimum-score").defaultValue(1).range(1, 100).build());
     private final Setting<Integer> topCount = sg.add(new IntSetting.Builder().name("top-chunks").defaultValue(5).range(1, 10).build());
     private final Setting<Integer> hue = sg.add(new IntSetting.Builder().name("hue").defaultValue(42).range(0, 360).build());
     private final Setting<Integer> saturation = sg.add(new IntSetting.Builder().name("saturation").defaultValue(90).range(0, 100).build());
@@ -111,6 +112,7 @@ public class SusChunkDetector extends Module {
         ranked.sort(Comparator.comparingInt((Entry e) -> e.score).reversed().thenComparingDouble(e -> e.distance));
 
         SettingColor color = color();
+        Vec3 from = mc.player.getEyePosition();
         int y = Math.max(mc.level.getMinY(), Math.min(mc.level.getMaxY() - 1, planeY.get()));
         StringBuilder text = new StringBuilder("Top Sus Chunks");
         int shown = Math.min(topCount.get(), ranked.size());
@@ -118,6 +120,7 @@ public class SusChunkDetector extends Module {
             Entry e = ranked.get(i);
             AABB box = new AABB(e.x * 16, y, e.z * 16, e.x * 16 + 16, y + 0.08, e.z * 16 + 16);
             event.renderer.box(box, color, color, ShapeMode.Lines, 0);
+            event.renderer.line(from.x, from.y, from.z, e.x * 16 + 8, y + 0.5, e.z * 16 + 8, color);
             text.append('\n').append(i + 1).append(". ").append(e.x).append(", ").append(e.z)
                 .append(" | ").append(e.score).append(" pts | ")
                 .append((int) e.distance).append("m | ").append(direction(e.x * 16 + 8 - mc.player.getX(), e.z * 16 + 8 - mc.player.getZ()));
