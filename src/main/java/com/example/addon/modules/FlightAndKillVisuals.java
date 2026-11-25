@@ -56,11 +56,17 @@ public class FlightAndKillVisuals extends Module {
             }
             Vec3 previous = null;
             int i = 0;
+            double yaw = Math.toRadians(mc.player.getYRot());
+            Vec3 side = new Vec3(Math.cos(yaw), 0, Math.sin(yaw)).scale(0.055);
             for (Vec3 point : trail) {
                 if (previous != null) {
                     int a = Math.max(15, color.a - i * 8);
                     SettingColor fade = new SettingColor(color.r, color.g, color.b, a);
-                    event.renderer.line(previous.x, previous.y, previous.z, point.x, point.y, point.z, fade);
+                    Vec3 p1 = previous.add(side), p2 = previous.subtract(side);
+                    Vec3 p3 = point.subtract(side), p4 = point.add(side);
+                    event.renderer.quad(p1.x,p1.y,p1.z,p2.x,p2.y,p2.z,p3.x,p3.y,p3.z,p4.x,p4.y,p4.z,fade);
+                    event.renderer.line(p1.x,p1.y,p1.z,p4.x,p4.y,p4.z,fade);
+                    event.renderer.line(p2.x,p2.y,p2.z,p3.x,p3.y,p3.z,fade);
                 }
                 previous = point; i++;
             }
