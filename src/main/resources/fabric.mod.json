@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "ljct",
+  "version": "${version}",
+  "name": "LJCT",
+  "description": "A modular Meteor Client addon for Minecraft 1.21.4.",
+  "authors": [
+    "buildmodpack-creator"
+  ],
+  "contact": {
+    "sources": "https://github.com/buildmodpack-creator/lj6"
+  },
+  "environment": "client",
+  "entrypoints": {
+    "meteor": [
+      "com.example.addon.AddonTemplate"
+    ]
+  },
+  "mixins": [
+    "ljct.mixins.json"
+  ],
+  "custom": {
+    "meteor-client:color": "190,90,220",
+    "modmenu": {
+      "parent": {
+        "id": "meteor-client"
+      }
+    }
+  },
+  "depends": {
+    "java": ">=${jdk_version}",
+    "minecraft": "${minecraft_version}",
+    "meteor-client": "*"
+  }
+}
