@@ -28,7 +28,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 /** Event-driven construction-density scoring. Render reads cached scores only. */
-public class SusChunkDetector extends Module {
+public class SusChunkDetector extends Module {\n    public static volatile String hudText = "Sus chunks: waiting for chunk data";
     private final SettingGroup sg = settings.getDefaultGroup();
     private final Setting<Integer> distance = sg.add(new IntSetting.Builder().name("distance").defaultValue(96).range(16, 192).build());
     private final Setting<Integer> planeY = sg.add(new IntSetting.Builder().name("outline-y").description("Y plane used for the chunk outline.").defaultValue(64).range(-64, 320).build());
@@ -45,7 +45,7 @@ public class SusChunkDetector extends Module {
         super(AddonTemplate.VISUAL_CATEGORY, "sus-chunk-detector", "Scores cached chunks by artificial/building block density.");
     }
 
-    @Override public void onDeactivate() { cache.clear(); }
+    @Override public void onDeactivate() { cache.clear(); hudText = "Sus Chunk Detector: off"; }
 
     @EventHandler private void onChunk(ChunkDataEvent event) {
         if (event == null || event.chunk() == null || mc.level == null) return;
@@ -76,7 +76,7 @@ public class SusChunkDetector extends Module {
         if (w == 0) s.remove(p); else s.put(p, w);
     }
 
-    @EventHandler private void onLeave(GameLeftEvent event) { cache.clear(); }
+    @EventHandler private void onLeave(GameLeftEvent event) { cache.clear(); hudText = "Sus chunks: world unloaded"; }
 
     @EventHandler private void onRender(Render3DEvent event) {
         if (mc.player == null || mc.level == null || cache.isEmpty()) return;
