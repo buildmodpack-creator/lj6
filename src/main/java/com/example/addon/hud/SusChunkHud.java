@@ -16,7 +16,7 @@ public class SusChunkHud extends HudElement {
 
     @Override public void render(HudRenderer renderer) {
         String text = SusChunkDetector.hudText;
-        setSize(renderer.textWidth(text, true), renderer.textHeight(true) * Math.max(1, text.split("\\n").length));
+        setSize(renderer.textWidth(text, true), renderer.textHeight(true) * Math.max(1, (int) text.lines().count()));
         renderer.quad(x, y, getWidth() + 8, getHeight() + 4, new Color(20, 20, 24, 150));
         renderer.text(text, x + 4, y + 2, Color.WHITE, true);
     }
