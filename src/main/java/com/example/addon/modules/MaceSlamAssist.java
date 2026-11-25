@@ -28,7 +28,7 @@ public class MaceSlamAssist extends Module {
         boolean ready = fall >= triggerFall.get() && mc.player.getAttackStrengthScale(0.5f) >= 0.9f;
         String text = String.format(java.util.Locale.ROOT, "Mace | fall %.1f | est. %.1f | %s", fall, estimated, ready ? "STRIKE WINDOW" : "WAIT");
         TextRenderer tr = TextRenderer.get();
-        tr.begin(event.graphics);
+        tr.begin();
         double w = tr.getWidth(text, true);
         Renderer2D.COLOR.begin();
         Renderer2D.COLOR.quad(7, 30, w + 10, tr.getHeight(true) + 8, new Color(12, 12, 18, 180));

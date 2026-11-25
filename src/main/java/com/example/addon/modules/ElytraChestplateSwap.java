@@ -74,7 +74,7 @@ public class ElytraChestplateSwap extends Module {
         String durability = chest.isEmpty() || chest.getMaxDamage() == 0 ? "n/a" : (chest.getMaxDamage() - chest.getDamageValue()) + "/" + chest.getMaxDamage();
         String text = String.format(java.util.Locale.ROOT, "Flight %.1f m/s | Chest durability %s", speed, durability);
         TextRenderer tr = TextRenderer.get();
-        tr.begin(event.graphics);
+        tr.begin();
         double w = tr.getWidth(text, true);
         Renderer2D.COLOR.begin();
         Renderer2D.COLOR.quad(7, 53, w + 10, tr.getHeight(true) + 8, new Color(12, 12, 18, 180));

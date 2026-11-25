@@ -33,7 +33,7 @@ public class TargetHUD extends Module {
             String.format(java.util.Locale.ROOT, "Distance: %.1f m", distance)
         };
         TextRenderer tr = TextRenderer.get();
-        tr.begin(event.graphics);
+        tr.begin();
         double width = 0;
         for (String line : lines) width = Math.max(width, tr.getWidth(line, true));
         double height = tr.getHeight(true);

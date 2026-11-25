@@ -47,7 +47,7 @@ public class CrystalAnchorHelper extends Module {
         for (int slot = 0; slot < 9; slot++) {
             if (mc.player.getInventory().getItem(slot).is(item)) {
                 mc.player.getInventory().selected = slot;
-                status = "Selected " + item.getName(Items.END_CRYSTAL.getDefaultInstance()).getString();
+                status = "Selected " + mc.player.getInventory().getItem(slot).getHoverName().getString();
                 return;
             }
         }
@@ -67,7 +67,7 @@ public class CrystalAnchorHelper extends Module {
 
     private static void draw(Render2DEvent event, String text) {
         TextRenderer tr = TextRenderer.get();
-        tr.begin(event.graphics);
+        tr.begin();
         double w = tr.getWidth(text, true);
         Renderer2D.COLOR.begin();
         Renderer2D.COLOR.quad(7, 7, w + 10, tr.getHeight(true) + 8, new Color(15, 15, 20, 175));

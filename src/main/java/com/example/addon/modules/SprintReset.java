@@ -21,6 +21,7 @@ public class SprintReset extends Module {
     private Entity pendingTarget;
     private float healthBefore;
     private int confirmAt = -1;
+    private int pendingUntil = -1;
     private int restoreAt = -1;
     private boolean restoreSprint;
 
@@ -37,17 +38,28 @@ public class SprintReset extends Module {
         if (mc.player == null || !(event.entity instanceof LivingEntity living) || living == mc.player) return;
         pendingTarget = living;
         healthBefore = living.getHealth();
-        confirmAt = mc.player.tickCount + delay.get();
+        confirmAt = mc.player.tickCount;
+        pendingUntil = mc.player.tickCount + 4;
     }
 
     @EventHandler private void onTick(TickEvent.Pre event) {
         if (mc.player == null) { clear(); return; }
         int tick = mc.player.tickCount;
-        if (pendingTarget != null && tick >= confirmAt) {
+        if (pendingTarget != null) {
             boolean hitConfirmed = pendingTarget.isAlive() ? pendingTarget.getHealth() < healthBefore : healthBefore > 0;
-            pendingTarget = null;
+            if (hitConfirmed) {
+                pendingTarget = null;
+                pendingUntil = -1;
+                confirmAt = tick + delay.get();
+            } else if (tick >= pendingUntil) {
+                pendingTarget = null;
+                pendingUntil = -1;
+                confirmAt = -1;
+            }
+        }
+        if (pendingTarget == null && confirmAt >= 0 && tick >= confirmAt) {
             confirmAt = -1;
-            if (hitConfirmed && mc.player.isSprinting()) {
+            if (mc.player.isSprinting()) {
                 restoreSprint = true;
                 mc.player.setSprinting(false);
                 restoreAt = tick + hold.get();
@@ -65,7 +77,7 @@ public class SprintReset extends Module {
         }
     }
 
-    private void clear() { pendingTarget = null; confirmAt = -1; restoreAt = -1; restoreSprint = false; }
+    private void clear() { pendingTarget = null; confirmAt = -1; pendingUntil = -1; restoreAt = -1; restoreSprint = false; }
 
     public enum ResetMode { WTap, DTap }
 }
