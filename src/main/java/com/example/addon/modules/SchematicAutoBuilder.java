@@ -84,7 +84,8 @@ public class SchematicAutoBuilder extends Module {
             BlockHitResult hit=findSupport(target.pos);
             if(hit==null){status="No valid support face";updateHud();return;}
             // Vanilla client interaction: normal reach, server validation and placement rules apply.
-            mc.gameMode.useItemOn(mc.player,InteractionHand.MAIN_HAND,hit);
+            var result=mc.gameMode.useItemOn(mc.player,InteractionHand.MAIN_HAND,hit);
+            if(!result.consumesAction()){status="Placement rejected by interaction rules";updateHud();return;}
             actions++;cursor++;placed++;delayCounter=placeDelay.get();
             if(delayCounter>0)break;
         }
