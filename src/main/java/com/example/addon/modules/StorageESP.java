@@ -34,7 +34,10 @@ public class StorageESP extends Module {
     private final Setting<SettingColor> furnaceColor = color("furnace-color", 255, 110, 75);
 
     public StorageESP() {
-        super(AddonTemplate.VISUAL_CATEGORY, "storage-esp",
+        // Keep a unique Meteor module ID: "storage-esp" belongs to Meteor itself.
+        // Modules.add() replaces modules by name, so reusing it removes Meteor's
+        // built-in StorageESP and leaves StorageOutlineShader without its dependency.
+        super(AddonTemplate.VISUAL_CATEGORY, "ljct-storage-esp",
             "Draws cached storage boxes with the normal 3D shape renderer; does not use Meteor's post-process outline shader.");
     }
     private Setting<Boolean> bool(String name, boolean value) {
