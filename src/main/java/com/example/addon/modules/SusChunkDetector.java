@@ -80,11 +80,16 @@ public class SusChunkDetector extends Module {
     @EventHandler private void onLeave(GameLeftEvent event) { cache.clear(); hudText = "Sus chunks: world unloaded"; }
 
     @EventHandler private void onRender(Render3DEvent event) {
-        if (mc.player == null || mc.level == null || cache.isEmpty()) return;
+        if (mc.player == null || mc.level == null || cache.isEmpty()) {
+            hudText = "Sus chunks: waiting for cached chunks";
+            return;
+        }
         int radius = (int) Math.ceil(distance.get() / 16.0) + 1;
         int cx = mc.player.getBlockX() >> 4, cz = mc.player.getBlockZ() >> 4;
         double maxSq = (double) distance.get() * distance.get();
         SettingColor color = color();
+        StringBuilder labels = new StringBuilder("Sus chunks");
+        int labelCount = 0;
         for (int x = cx - radius; x <= cx + radius; x++) for (int z = cz - radius; z <= cz + radius; z++) {
             double dx = x * 16 + 8 - mc.player.getX(), dz = z * 16 + 8 - mc.player.getZ();
             if (dx * dx + dz * dz > maxSq) continue;
@@ -93,8 +98,13 @@ public class SusChunkDetector extends Module {
             double y = Math.max(mc.level.getMinY(), Math.min(mc.level.getMaxY() - 1, planeY.get()));
             AABB box = new AABB(x * 16, y, z * 16, x * 16 + 16, y + 0.08, z * 16 + 16);
             event.renderer.box(box, color, color, ShapeMode.Lines, 0);
-            // Score is also encoded in outline intensity/threshold; no world blocks are read here.
+            if (labelCount < 6) {
+                labels.append("\\nChunk ").append(x).append(',').append(z).append(" score ").append(s.score());
+                labelCount++;
+            }
         }
+        if (labelCount == 0) labels.append(": no matches");
+        hudText = labels.toString();
     }
 
     private SettingColor color() {
