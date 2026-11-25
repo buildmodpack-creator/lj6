@@ -132,11 +132,14 @@ public class BuildAssist extends Module {
         BlockPos origin = SchematicManager.getAnchor();
         if (origin == null) origin = mc.player.blockPosition();
         int drawn = 0;
+        int scanned = 0;
         int limit = previewLimit.get();
+        int scanLimit = limit * 16;
 
-        for (int y = 0; y < schematic.getHeight() && drawn < limit; y++) {
-            for (int z = 0; z < schematic.getLength() && drawn < limit; z++) {
-                for (int x = 0; x < schematic.getWidth() && drawn < limit; x++) {
+        for (int y = 0; y < schematic.getHeight() && drawn < limit && scanned < scanLimit; y++) {
+            for (int z = 0; z < schematic.getLength() && drawn < limit && scanned < scanLimit; z++) {
+                for (int x = 0; x < schematic.getWidth() && drawn < limit && scanned < scanLimit; x++) {
+                    scanned++;
                     String expectedState = schematic.getBlockState(x, y, z);
                     if (SchematicData.isAir(expectedState)) continue;
 
