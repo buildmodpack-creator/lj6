@@ -144,8 +144,15 @@ public class StorageChunkCacheScanner extends Module {
     }
 
     @Override
+    public void onActivate() {
+        // Re-publish this instance when the module is re-enabled.
+        INSTANCE = this;
+    }
+
+    @Override
     public void onDeactivate() {
-        cache.clear();
+        // Keep the current world's snapshots so re-enabling the scanner does not
+        // leave dependent ESP modules empty until chunks happen to reload.
     }
 
     @EventHandler
@@ -335,10 +342,18 @@ public class StorageChunkCacheScanner extends Module {
     /** Immutable client-loaded block snapshot shared by ESP modules. */
     public record CachedBlock(int x, int y, int z, String blockId, int weight) {}
 
+    /** True only while the cache producer is registered and active. */
+    public static boolean isAvailable() {
+        StorageChunkCacheScanner module = INSTANCE;
+        return module != null && module.isActive();
+    }
+
     /** Reads only cached entries; it never scans chunk sections or queries world block states. */
     public static java.util.List<CachedBlock> getCachedBlocks(double x, double y, double z, double range, int limit) {
         StorageChunkCacheScanner module = INSTANCE;
-        if (module == null || !module.isActive() || limit <= 0) return java.util.List.of();
+        if (module == null || !module.isActive() || limit <= 0
+            || !Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)
+            || !Double.isFinite(range) || range < 0) return java.util.List.of();
         java.util.ArrayList<CachedBlock> result = new java.util.ArrayList<>();
         int cx = ((int) Math.floor(x)) >> 4;
         int cz = ((int) Math.floor(z)) >> 4;
