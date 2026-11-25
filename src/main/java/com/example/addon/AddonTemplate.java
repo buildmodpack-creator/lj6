@@ -62,6 +62,7 @@ public class AddonTemplate extends MeteorAddon {
         Modules.get().add(new MaceSlamAssist());
         Modules.get().add(new ElytraChestplateSwap());
         Modules.get().add(new TargetHUD());
+        LOG.info("Registered LJCT PvP modules");
 
         Modules.get().add(new CustomLowFire());
         Modules.get().add(new EntityCuller());
