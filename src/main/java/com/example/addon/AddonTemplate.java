@@ -4,6 +4,7 @@ import com.example.addon.commands.CommandExample;
 import com.example.addon.commands.SchematicCommand;
 import com.example.addon.hud.HudExample;
 import com.example.addon.hud.SchematicProgressHud;
+import com.example.addon.hud.SusChunkHud;
 import com.example.addon.modules.BuildAssist;
 import com.example.addon.modules.AutoBlockSelect;
 import com.example.addon.modules.ChunkVisual;
@@ -55,6 +56,7 @@ public class AddonTemplate extends MeteorAddon {
         Commands.add(new SchematicCommand());
         Hud.get().register(HudExample.INFO);
         Hud.get().register(SchematicProgressHud.INFO);
+        Hud.get().register(SusChunkHud.INFO);
     }
 
     @Override
