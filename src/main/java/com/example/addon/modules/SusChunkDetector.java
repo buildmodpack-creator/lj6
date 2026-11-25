@@ -99,7 +99,7 @@ public class SusChunkDetector extends Module {
             AABB box = new AABB(x * 16, y, z * 16, x * 16 + 16, y + 0.08, z * 16 + 16);
             event.renderer.box(box, color, color, ShapeMode.Lines, 0);
             if (labelCount < 6) {
-                labels.append("\\nChunk ").append(x).append(',').append(z).append(" score ").append(s.score());
+                labels.append((char) 10).append("Chunk ").append(x).append(',').append(z).append(" score ").append(s.score());
                 labelCount++;
             }
         }
