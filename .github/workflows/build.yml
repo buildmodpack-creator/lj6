@@ -1,4 +1,5 @@
 name: Build LJCT
+# Restored Gradle scaffold; Java 21 and official Mojang mappings.
 
 on:
   push:
