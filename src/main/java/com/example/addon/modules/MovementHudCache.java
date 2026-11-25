@@ -5,6 +5,7 @@ import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
+import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -36,12 +37,13 @@ public class MovementHudCache extends Module {
 
     /** Also called by the HUD element so it works without requiring this helper module to be enabled. */
     public static void updateCache() {
-        if (mc.player == null || mc.level == null) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null || client.level == null) {
             clear();
             return;
         }
 
-        Vec3 velocity = mc.player.getDeltaMovement();
+        Vec3 velocity = client.player.getDeltaMovement();
         double horizontalSpeed = velocity.horizontalDistance() * 20.0;
         double verticalSpeed = velocity.y * 20.0;
 
@@ -50,12 +52,12 @@ public class MovementHudCache extends Module {
             .append(signedTenths(verticalSpeed));
 
         StringBuilder second = new StringBuilder(72);
-        ItemStack chest = mc.player.getItemBySlot(EquipmentSlot.CHEST);
+        ItemStack chest = client.player.getItemBySlot(EquipmentSlot.CHEST);
         second.append(chest.is(net.minecraft.world.item.Items.ELYTRA) ? "Elytra " : "Chest ")
             .append(durability(chest))
-            .append("  H ").append(durability(mc.player.getItemBySlot(EquipmentSlot.HEAD)))
-            .append("  L ").append(durability(mc.player.getItemBySlot(EquipmentSlot.LEGS)))
-            .append("  B ").append(durability(mc.player.getItemBySlot(EquipmentSlot.FEET)));
+            .append("  H ").append(durability(client.player.getItemBySlot(EquipmentSlot.HEAD)))
+            .append("  L ").append(durability(client.player.getItemBySlot(EquipmentSlot.LEGS)))
+            .append("  B ").append(durability(client.player.getItemBySlot(EquipmentSlot.FEET)));
 
         line1 = first.toString();
         line2 = second.toString();
