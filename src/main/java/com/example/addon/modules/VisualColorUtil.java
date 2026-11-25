@@ -39,8 +39,7 @@ final class VisualColorUtil {
     }
     static SettingColor resolve(SettingColor base, boolean chroma, int speed, int hue, int saturation, int brightness, int alpha) {
         float h = chroma ? ((System.currentTimeMillis() * speed) % 12000L) / 12000f : hue / 360f;
-        int rgb = chroma ? Color.HSBtoRGB(h, saturation / 100f, brightness / 100f) : Color.HSBtoRGB(h, saturation / 100f, brightness / 100f);
-        if (!chroma && base != null) rgb = (base.r << 16) | (base.g << 8) | base.b;
+        int rgb = Color.HSBtoRGB(h, saturation / 100f, brightness / 100f);
         return new SettingColor((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255, alpha);
     }
 }
