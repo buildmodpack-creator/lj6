@@ -39,7 +39,7 @@ public class CS2KnifeViewmodel extends Module {
         if (mc.player == null || mc.level == null) return;
         boolean firstPerson = mc.options.getCameraType().isFirstPerson();
         if (!firstPerson && !thirdPerson.get()) return;
-        Vec3 camera = mc.gameRenderer.getMainCamera().getPosition();
+        Vec3 camera = firstPerson ? mc.gameRenderer.getMainCamera().getPosition() : mc.player.position().add(0, mc.player.getBbHeight() * 0.62, 0);
         float yaw = mc.player.getYRot(), pitch = mc.player.getXRot();
         double yr = Math.toRadians(yaw), pr = Math.toRadians(pitch);
         Vec3 forward = new Vec3(-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr)).normalize();
