@@ -39,6 +39,13 @@ public class ElytraChestplateSwap extends Module {
     }
 
     @Override
+    public void onActivate() {
+        nextSwapTick = 0L;
+        // Enabling the module performs one immediate swap when the inventory is ready.
+        swap();
+    }
+
+    @Override
     public void onDeactivate() {
         nextSwapTick = 0L;
     }
