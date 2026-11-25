@@ -41,17 +41,17 @@ public class EntityChamsAndCape extends Module {
             if (entity instanceof Player) {
                 if (!players.get()) continue;
             } else if (!mobs.get()) continue;
-            AABB box = entity.getBoundingBox().inflate(0.025);
+            Vec3 interpolated = VisualColorUtil.lerpPosition(entity, event.tickDelta);\n            Vec3 offset = interpolated.subtract(entity.position());\n            AABB box = entity.getBoundingBox().move(offset).inflate(0.025);
             event.renderer.box(box, color, color, filled.get() ? ShapeMode.Both : ShapeMode.Lines, 0);
-            if (cape.get() && entity instanceof Player player) drawCape(event, player, color);
+            if (cape.get() && entity instanceof Player player) drawCape(event, player, color, event.tickDelta);
         }
     }
 
-    private static void drawCape(Render3DEvent event, Player player, SettingColor color) {
+    private static void drawCape(Render3DEvent event, Player player, SettingColor color, float tickDelta) {
         double yaw = Math.toRadians(player.getYRot());
         Vec3 back = new Vec3(Math.sin(yaw), 0, -Math.cos(yaw));
         Vec3 right = new Vec3(Math.cos(yaw), 0, Math.sin(yaw));
-        Vec3 p = new Vec3(player.getX(), player.getY(), player.getZ());
+        Vec3 p = VisualColorUtil.lerpPosition(player, tickDelta);
         double sway = Math.sin((System.currentTimeMillis() + event.tickDelta * 50) / 230.0 + player.getId()) * 0.12;
         Vec3 top = p.add(0, player.getBbHeight() * 0.82, 0).add(back.scale(0.13));
         Vec3 bottom = top.add(back.scale(0.16 + sway)).add(0, -0.82, 0);
