@@ -18,6 +18,11 @@ public class MovementEquipmentHud extends HudElement {
     }
 
     @Override
+    public void tick(HudRenderer renderer) {
+        MovementHudCache.updateCache();
+    }
+
+    @Override
     public void render(HudRenderer renderer) {
         String first = MovementHudCache.line1;
         String second = MovementHudCache.line2;
