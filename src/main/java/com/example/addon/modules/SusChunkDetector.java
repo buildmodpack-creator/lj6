@@ -41,10 +41,12 @@ public class SusChunkDetector extends Module {
     private final Setting<Integer> alpha = sg.add(new IntSetting.Builder().name("alpha").defaultValue(190).range(0, 255).build());
     private final Setting<Boolean> chroma = sg.add(new BoolSetting.Builder().name("chroma").defaultValue(false).build());
     private final Setting<Integer> chromaSpeed = sg.add(new IntSetting.Builder().name("chroma-speed").defaultValue(3).range(1, 20).visible(chroma::get).build());
+    private static volatile SusChunkDetector INSTANCE;
     private final Map<Long, Snapshot> cache = new HashMap<>();
 
     public SusChunkDetector() {
         super(AddonTemplate.VISUAL_CATEGORY, "sus-chunk-detector", "Ranks cached chunks by storage and artificial block evidence.");
+        INSTANCE = this;
     }
 
     @Override public void onDeactivate() {
@@ -59,7 +61,7 @@ public class SusChunkDetector extends Module {
         LevelChunkSection[] sections = chunk.getSections();
         for (int si = 0; si < sections.length; si++) {
             LevelChunkSection section = sections[si];
-            if (section == null || section.hasOnlyAir()) continue;
+            if (section == null || section.hasOnlyAir() || !section.maybeHas(state -> isInteresting(state.getBlock()))) continue;
             int baseY = mc.level.getMinY() + (si << 4);
             for (int y = 0; y < 16; y++) for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
                 BlockState state = section.getBlockState(x, y, z);
@@ -140,17 +142,33 @@ public class SusChunkDetector extends Module {
         return new SettingColor((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255, alpha.get());
     }
 
+    private static boolean isInteresting(Block block) {
+        String n = BuiltInRegistries.BLOCK.getKey(block).getPath();
+        return n.equals("chest") || n.equals("trapped_chest") || n.equals("barrel") || n.contains("shulker_box")
+            || n.equals("ender_chest") || n.equals("hopper") || n.equals("furnace") || n.equals("blast_furnace")
+            || n.equals("smoker") || n.equals("enchanting_table") || n.equals("spawner") || n.equals("trial_spawner")
+            || n.equals("nether_portal") || n.contains("piston") || n.endsWith("_bed") || n.contains("torch")
+            || n.contains("glass") || n.endsWith("_sign") || n.contains("planks") || n.contains("stairs")
+            || n.contains("slab") || n.contains("fence") || n.contains("wall");
+    }
+
     private static int weight(Block block, int y) {
         String n = BuiltInRegistries.BLOCK.getKey(block).getPath();
         int value = 0;
         if (n.equals("chest") || n.equals("trapped_chest") || n.equals("barrel") || n.contains("shulker_box")) value = 5;
+        else if (n.equals("spawner") || n.equals("trial_spawner")) value = 7;
         else if (n.equals("hopper") || n.equals("furnace") || n.equals("blast_furnace") || n.equals("smoker")
-            || n.equals("enchanting_table") || n.equals("spawner")) value = 4;
+            || n.equals("enchanting_table")) value = 4;
         else if (n.equals("nether_portal") || n.contains("piston") || n.endsWith("_bed")) value = 3;
         else if (n.contains("torch") || n.contains("glass") || n.endsWith("_sign") || n.endsWith("_wall_sign")) value = 2;
         else if (n.contains("planks") || n.contains("stairs") || n.contains("slab") || n.contains("fence") || n.contains("wall")) value = 1;
         if (y < 50 && value > 0) value++;
         return value;
+    }
+
+    public static void onChunkUnload(int x, int z) {
+        SusChunkDetector module = INSTANCE;
+        if (module != null && module.isActive()) module.cache.remove(key(x, z));
     }
 
     private static long key(int x, int z) { return (x & 0xffffffffL) | ((z & 0xffffffffL) << 32); }

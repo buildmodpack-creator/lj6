@@ -3,6 +3,7 @@ package com.example.addon.modules;
 import com.example.addon.AddonTemplate;
 import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
+import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.events.world.BlockUpdateEvent;
 import meteordevelopment.meteorclient.events.world.ChunkDataEvent;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.Iterator;
 
 public class StashAndTunnelFinder extends Module {
     private static final int MIN_Y = -58, MAX_Y = 60;
@@ -37,26 +39,39 @@ public class StashAndTunnelFinder extends Module {
     private final Setting<Boolean> showTunnels = sg.add(new BoolSetting.Builder().name("straight-tunnels").defaultValue(true).build());
     private final Setting<SettingColor> stashColor = sg.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("stash-color").defaultValue(new SettingColor(255, 75, 85, 210)).build());
     private final Setting<SettingColor> tunnelColor = sg.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("tunnel-color").defaultValue(new SettingColor(70, 190, 255, 190)).build());
+    private static volatile StashAndTunnelFinder INSTANCE;
     private final Map<Long, List<Candidate>> cache = new HashMap<>();
+    private final Set<Long> dirtyChunks = new HashSet<>();
 
     public StashAndTunnelFinder() {
         super(AddonTemplate.VISUAL_CATEGORY, "stash-and-tunnel-finder", "Caches nearby container clusters and straight underground corridors.");
+        INSTANCE = this;
     }
 
-    @Override public void onDeactivate() { cache.clear(); }
+    @Override public void onDeactivate() { cache.clear(); dirtyChunks.clear(); }
 
     @EventHandler private void onChunk(ChunkDataEvent event) {
         if (event == null || event.chunk() == null || mc.level == null) return;
+        long key = key(event.chunk().getPos().x, event.chunk().getPos().z);
+        dirtyChunks.remove(key);
         rebuild(event.chunk());
     }
 
     @EventHandler private void onBlock(BlockUpdateEvent event) {
-        if (event == null || event.pos == null || event.newState == null || mc.level == null) return;
-        String id = event.newState.getBlock().builtInRegistryHolder().key().location().getPath();
-        if (event.newState.isAir() || isStorage(event.newState.getBlock()) || id.contains("piston")) {
-            LevelChunk chunk = mc.level.getChunk(event.pos.getX() >> 4, event.pos.getZ() >> 4);
-            if (chunk != null) rebuild(chunk);
-        }
+        if (event == null || event.pos == null || mc.level == null) return;
+        if (event.pos.getY() < MIN_Y || event.pos.getY() > MAX_Y) return;
+        dirtyChunks.add(key(event.pos.getX() >> 4, event.pos.getZ() >> 4));
+    }
+
+    @EventHandler private void onTick(TickEvent.Pre event) {
+        if (mc.level == null || dirtyChunks.isEmpty()) return;
+        Iterator<Long> iterator = dirtyChunks.iterator();
+        long chunkKey = iterator.next();
+        iterator.remove();
+        int x = (int) chunkKey;
+        int z = (int) (chunkKey >> 32);
+        LevelChunk chunk = mc.level.getChunk(x, z);
+        if (chunk != null) rebuild(chunk);
     }
 
     private void rebuild(LevelChunk chunk) {
@@ -120,7 +135,16 @@ public class StashAndTunnelFinder extends Module {
         cache.put(key(chunk.getPos().x, chunk.getPos().z), found);
     }
 
-    @EventHandler private void onLeave(GameLeftEvent event) { cache.clear(); }
+    @EventHandler private void onLeave(GameLeftEvent event) { cache.clear(); dirtyChunks.clear(); }
+
+    public static void onChunkUnload(int x, int z) {
+        StashAndTunnelFinder module = INSTANCE;
+        if (module != null && module.isActive()) {
+            long key = key(x, z);
+            module.cache.remove(key);
+            module.dirtyChunks.remove(key);
+        }
+    }
 
     @EventHandler private void onRender(Render3DEvent event) {
         if (mc.player == null || mc.level == null || cache.isEmpty()) return;

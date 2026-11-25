@@ -28,10 +28,12 @@ public class NewOldChunkDetector extends Module {
     private final Setting<Integer> mismatchLimit = sg.add(new IntSetting.Builder().name("edge-mismatch-limit").defaultValue(3).range(1, 64).build());
     private final Setting<SettingColor> continuousColor = sg.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("continuous").defaultValue(new SettingColor(65, 220, 110, 180)).build());
     private final Setting<SettingColor> seamColor = sg.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("edge-discontinuity").defaultValue(new SettingColor(255, 145, 55, 210)).build());
+    private static volatile NewOldChunkDetector INSTANCE;
     private final Map<Long, EdgeData> cache = new HashMap<>();
 
     public NewOldChunkDetector() {
         super(AddonTemplate.VISUAL_CATEGORY, "new-old-chunk-detector", "Compares cached chunk-edge samples; seams are only a heuristic, not authoritative age data.");
+        INSTANCE = this;
     }
 
     @Override public void onDeactivate() { cache.clear(); }
@@ -93,6 +95,11 @@ public class NewOldChunkDetector extends Module {
             SettingColor color = mismatches >= mismatchLimit.get() ? seamColor.get() : continuousColor.get();
             event.renderer.box(new AABB(x * 16, y, z * 16, x * 16 + 16, y + 0.04, z * 16 + 16), color, color, ShapeMode.Lines, 0);
         }
+    }
+
+    public static void onChunkUnload(int x, int z) {
+        NewOldChunkDetector module = INSTANCE;
+        if (module != null && module.isActive()) module.cache.remove(key(x, z));
     }
 
     private static int sample(LevelChunk chunk, BlockPos pos) { return sample(chunk.getBlockState(pos)); }

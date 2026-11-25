@@ -15,6 +15,7 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -277,11 +278,20 @@ public class StorageChunkCacheScanner extends Module {
     }
 
     private static boolean isInteresting(BlockState state) {
-        return BLOCK_WEIGHTS.containsKey(state.getBlock());
+        return classify(state) > 0;
     }
 
     private static int classify(BlockState state) {
-        return BLOCK_WEIGHTS.getOrDefault(state.getBlock(), 0);
+        Integer weight = BLOCK_WEIGHTS.get(state.getBlock());
+        if (weight != null) return weight;
+        String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+        if (id.endsWith("_bed")) return 2;
+        if (id.equals("nether_portal") || id.contains("piston")) return 3;
+        if (id.contains("torch") || id.contains("glass") || id.endsWith("_sign")) return 1;
+        if (id.equals("enchanting_table")) return 4;
+        if (id.contains("planks") || id.contains("stairs") || id.contains("slab")
+            || id.contains("fence") || id.contains("wall")) return 1;
+        return 0;
     }
 
     private static Map<Block, Integer> createBlockWeights() {
@@ -295,7 +305,7 @@ public class StorageChunkCacheScanner extends Module {
             Blocks.BROWN_SHULKER_BOX, Blocks.GREEN_SHULKER_BOX, Blocks.RED_SHULKER_BOX,
             Blocks.BLACK_SHULKER_BOX
         );
-        add(weights, 4, Blocks.HOPPER, Blocks.DISPENSER, Blocks.DROPPER, Blocks.CRAFTER);
+        add(weights, 4, Blocks.HOPPER, Blocks.DISPENSER, Blocks.DROPPER, Blocks.CRAFTER, Blocks.ENCHANTING_TABLE);
         add(weights, 2, Blocks.FURNACE, Blocks.SMOKER, Blocks.BLAST_FURNACE, Blocks.BREWING_STAND, Blocks.LECTERN);
         add(weights, 8,
             Blocks.SPAWNER, Blocks.TRIAL_SPAWNER, Blocks.VAULT, Blocks.BEACON, Blocks.CONDUIT,
