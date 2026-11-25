@@ -74,7 +74,8 @@ public class StashAndTunnelFinder extends Module {
 
     private void rebuild(LevelChunk chunk) {
         int minY = mc.level.getMinY();
-        int maxY = mc.level.getMaxY() - 3;
+        int tunnelMinY = Math.max(mc.level.getMinY(), -58);
+        int tunnelMaxY = Math.min(mc.level.getMaxY() - 3, 60);
         int bx = chunk.getPos().x << 4, bz = chunk.getPos().z << 4;
         List<Candidate> found = new ArrayList<>();
         Set<Long> storage = new HashSet<>();
@@ -102,7 +103,7 @@ public class StashAndTunnelFinder extends Module {
         }
 
         if (showTunnels.get() && found.size() < maxCandidates.get()) {
-            outer: for (int y = minY; y <= maxY; y++) {
+            outer: for (int y = tunnelMinY; y <= tunnelMaxY; y++) {
                 for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
                     BlockPos p = new BlockPos(bx + x, y, bz + z);
                     for (int width = 1; width <= 3; width++) {
