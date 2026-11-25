@@ -55,6 +55,9 @@ public class CS2KnifeViewmodel extends Module {
         SettingColor c = VisualColorUtil.resolve(base, chroma.get(), chromaSpeed.get(), hue.get(), saturation.get(), brightness.get(), alpha.get());
         SettingColor dark = new SettingColor(Math.max(0, c.r / 2), Math.max(0, c.g / 2), Math.max(0, c.b / 2), c.a);
         line(event, grip, bladeBase, dark);
+        Vec3 tipLeft = tip.add(bladeSide.scale(0.22));
+        Vec3 tipRight = tip.subtract(bladeSide.scale(0.22));
+        event.renderer.quad(bladeBase.x + bladeSide.x, bladeBase.y + bladeSide.y, bladeBase.z + bladeSide.z, tipLeft.x, tipLeft.y, tipLeft.z, tipRight.x, tipRight.y, tipRight.z, bladeBase.x - bladeSide.x, bladeBase.y - bladeSide.y, bladeBase.z - bladeSide.z, c);
         line(event, bladeBase.add(bladeSide), tip, c);
         line(event, bladeBase.subtract(bladeSide), tip, c);
         line(event, bladeBase.add(bladeSide), bladeBase.subtract(bladeSide), c);
