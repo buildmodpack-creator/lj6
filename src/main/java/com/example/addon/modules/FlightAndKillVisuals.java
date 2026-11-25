@@ -50,7 +50,7 @@ public class FlightAndKillVisuals extends Module {
         boolean flying = mc.player.isFallFlying() || (mc.player.getAbilities().flying && !mc.player.onGround());
         if (ribbon.get() && flying) {
             if (lastTrailTick != mc.player.tickCount) {
-                trail.addFirst(mc.player.position());
+                trail.addFirst(VisualColorUtil.lerpPosition(mc.player, event.tickDelta));
                 while (trail.size() > maxRibbonPoints.get()) trail.removeLast();
                 lastTrailTick = mc.player.tickCount;
             }
