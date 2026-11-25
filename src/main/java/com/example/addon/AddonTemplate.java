@@ -3,6 +3,7 @@ package com.example.addon;
 import com.example.addon.commands.CommandExample;
 import com.example.addon.commands.SchematicCommand;
 import com.example.addon.hud.HudExample;
+import com.example.addon.hud.MovementEquipmentHud;
 import com.example.addon.hud.SchematicProgressHud;
 import com.example.addon.hud.SusChunkHud;
 import com.example.addon.modules.BuildAssist;
@@ -12,6 +13,7 @@ import com.example.addon.modules.EntityOutline;
 import com.example.addon.modules.CustomLowFire;
 import com.example.addon.modules.EntityCuller;
 import com.example.addon.modules.ParticleLimiter;
+import com.example.addon.modules.MovementHudCache;
 import com.example.addon.modules.StorageChunkCacheScanner;
 import com.example.addon.modules.SusChunkDetector;
 import com.example.addon.modules.NewOldChunkDetector;
@@ -67,6 +69,7 @@ public class AddonTemplate extends MeteorAddon {
         Modules.get().add(new CustomLowFire());
         Modules.get().add(new EntityCuller());
         Modules.get().add(new ParticleLimiter());
+        Modules.get().add(new MovementHudCache());
         Modules.get().add(new StorageChunkCacheScanner());
         Modules.get().add(new SusChunkDetector());
         Modules.get().add(new NewOldChunkDetector());
@@ -76,6 +79,7 @@ public class AddonTemplate extends MeteorAddon {
         Commands.add(new CommandExample());
         Commands.add(new SchematicCommand());
         Hud.get().register(HudExample.INFO);
+        Hud.get().register(MovementEquipmentHud.INFO);
         Hud.get().register(SchematicProgressHud.INFO);
         Hud.get().register(SusChunkHud.INFO);
     }
