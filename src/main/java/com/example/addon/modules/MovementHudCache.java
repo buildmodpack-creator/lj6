@@ -50,7 +50,9 @@ public class MovementHudCache extends Module {
             .append(signedTenths(verticalSpeed));
 
         StringBuilder second = new StringBuilder(72);
-        second.append("Chest ").append(durability(mc.player.getItemBySlot(EquipmentSlot.CHEST)))
+        ItemStack chest = mc.player.getItemBySlot(EquipmentSlot.CHEST);
+        second.append(chest.is(net.minecraft.world.item.Items.ELYTRA) ? "Elytra " : "Chest ")
+            .append(durability(chest))
             .append("  H ").append(durability(mc.player.getItemBySlot(EquipmentSlot.HEAD)))
             .append("  L ").append(durability(mc.player.getItemBySlot(EquipmentSlot.LEGS)))
             .append("  B ").append(durability(mc.player.getItemBySlot(EquipmentSlot.FEET)));
