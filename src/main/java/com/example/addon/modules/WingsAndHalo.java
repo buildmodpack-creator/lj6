@@ -38,14 +38,14 @@ public class WingsAndHalo extends Module {
 
     @EventHandler private void onRender(Render3DEvent event) {
         if (mc.player == null) return;
-        Vec3 pos = mc.player.position();
+        Vec3 pos = VisualColorUtil.lerpPosition(mc.player, event.tickDelta);
         if (pos.distanceToSqr(lastPos) > 0.0004) lastMotion = System.currentTimeMillis();
         lastPos = pos;
         boolean elytra = mc.player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
         boolean idle = System.currentTimeMillis() - lastMotion > idleSeconds.get() * 1000;
         double target = (foldWhenIdle.get() && idle) || (foldWithElytra.get() && elytra) ? 0.18 : 1.0;
         wingOpen += (target - wingOpen) * Math.min(1.0, event.frameTime * 8.0);
-        double x = mc.player.getX(), y = mc.player.getY(), z = mc.player.getZ();
+        double x = pos.x, y = pos.y, z = pos.z;
         double yaw = Math.toRadians(mc.player.getYRot());
         Vec3 right = new Vec3(Math.cos(yaw), 0, Math.sin(yaw));
         Vec3 back = new Vec3(Math.sin(yaw), 0, -Math.cos(yaw));
