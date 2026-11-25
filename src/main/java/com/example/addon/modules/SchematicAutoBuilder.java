@@ -41,6 +41,7 @@ public class SchematicAutoBuilder extends Module {
 
     private final List<BuildTarget> targets=new ArrayList<>();
     private SchematicData plannedFor;
+    private BlockPos plannedOrigin;
     private int cursor,delayCounter,placed,total,plannedRotation;
     private String status="Idle";
     public static volatile String hudText="Schematic: not loaded";
@@ -56,7 +57,7 @@ public class SchematicAutoBuilder extends Module {
     private int normalizedRotation(){int r=((rotation.get()%360)+360)%360;return ((r+45)/90*90)%360;}
     private BlockPos worldPos(int x,int y,int z){return SchematicManager.toWorldPos(x,y,z,origin());}
     private void resetPlan(){
-        targets.clear();cursor=0;placed=0;total=0;delayCounter=0;plannedFor=SchematicManager.getCurrent();plannedRotation=normalizedRotation();SchematicManager.setRotation(plannedRotation);
+        targets.clear();cursor=0;placed=0;total=0;delayCounter=0;plannedFor=SchematicManager.getCurrent();plannedRotation=normalizedRotation();plannedOrigin=origin();SchematicManager.setRotation(plannedRotation);
         if(plannedFor==null){status="No schematic";updateHud();return;}
         for(int y=0;y<plannedFor.getHeight();y++)for(int z=0;z<plannedFor.getLength();z++)for(int x=0;x<plannedFor.getWidth();x++){
             String state=plannedFor.getBlockState(x,y,z);
@@ -67,11 +68,12 @@ public class SchematicAutoBuilder extends Module {
 
     @EventHandler private void onTick(TickEvent.Pre event){
         if(mc.player==null||mc.level==null)return;
-        if(SchematicManager.getCurrent()!=plannedFor||plannedRotation!=normalizedRotation())resetPlan();
+        if(SchematicManager.getCurrent()!=plannedFor||plannedRotation!=normalizedRotation()||!origin().equals(plannedOrigin))resetPlan();
         if(plannedFor==null||!autoPlace.get()||cursor>=targets.size())return;
         if(delayCounter>0){delayCounter--;return;}
-        int actions=0;
-        while(actions<blocksPerTick.get()&&cursor<targets.size()){
+        int actions=0,processed=0;
+        while(actions<blocksPerTick.get()&&cursor<targets.size()&&processed<64){
+            processed++;
             BuildTarget target=targets.get(cursor);
             var existing=mc.level.getBlockState(target.pos);
             if(BuiltInRegistries.BLOCK.getKey(existing.getBlock()).toString().equals(SchematicData.getBlockId(target.state))){cursor++;placed++;updateHud();continue;}
