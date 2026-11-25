@@ -3,6 +3,7 @@ package com.example.addon.modules;
 import com.example.addon.AddonTemplate;
 import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
+import meteordevelopment.meteorclient.events.world.BlockUpdateEvent;
 import meteordevelopment.meteorclient.events.world.ChunkDataEvent;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
 import meteordevelopment.meteorclient.settings.IntSetting;
@@ -12,7 +13,6 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
@@ -20,30 +20,28 @@ import net.minecraft.world.phys.AABB;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Edge-continuity heuristic. A client cannot know a chunk's generation history
- * from block states alone; this marks edge discontinuities, not authoritative age.
- */
 public class NewOldChunkDetector extends Module {
     private final SettingGroup sg = settings.getDefaultGroup();
     private final Setting<Integer> distance = sg.add(new IntSetting.Builder().name("distance").defaultValue(96).range(16, 192).build());
     private final Setting<Integer> planeY = sg.add(new IntSetting.Builder().name("grid-y").defaultValue(64).range(-64, 320).build());
-    private final Setting<Integer> sampleStep = sg.add(new IntSetting.Builder().name("vertical-sample-step").description("Vertical spacing for cached border block/fluid samples.").defaultValue(8).range(4, 32).build());
-    private final Setting<Integer> mismatchLimit = sg.add(new IntSetting.Builder().name("edge-mismatch-limit").description("Minimum differing border samples to mark a seam.").defaultValue(3).range(1, 64).build());
-    private final SettingGroup sgColors = settings.createGroup("Colors");
-    private final Setting<SettingColor> continuousColor = sgColors.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("continuous").defaultValue(new SettingColor(65, 220, 110, 180)).build());
-    private final Setting<SettingColor> seamColor = sgColors.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("edge-discontinuity").defaultValue(new SettingColor(255, 145, 55, 210)).build());
+    private final Setting<Integer> sampleStep = sg.add(new IntSetting.Builder().name("vertical-sample-step").defaultValue(8).range(4, 32).build());
+    private final Setting<Integer> mismatchLimit = sg.add(new IntSetting.Builder().name("edge-mismatch-limit").defaultValue(3).range(1, 64).build());
+    private final Setting<SettingColor> continuousColor = sg.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("continuous").defaultValue(new SettingColor(65, 220, 110, 180)).build());
+    private final Setting<SettingColor> seamColor = sg.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("edge-discontinuity").defaultValue(new SettingColor(255, 145, 55, 210)).build());
     private final Map<Long, EdgeData> cache = new HashMap<>();
 
     public NewOldChunkDetector() {
-        super(AddonTemplate.VISUAL_CATEGORY, "new-old-chunk-detector", "Compares cached block/fluid samples along neighboring chunk borders.");
+        super(AddonTemplate.VISUAL_CATEGORY, "new-old-chunk-detector", "Compares cached chunk-edge samples; seams are only a heuristic, not authoritative age data.");
     }
 
     @Override public void onDeactivate() { cache.clear(); }
 
     @EventHandler private void onChunk(ChunkDataEvent event) {
         if (event == null || event.chunk() == null || mc.level == null) return;
-        LevelChunk chunk = event.chunk();
+        cache.put(key(event.chunk().getPos().x, event.chunk().getPos().z), sampleChunk(event.chunk()));
+    }
+
+    private EdgeData sampleChunk(LevelChunk chunk) {
         int minY = mc.level.getMinY(), maxY = mc.level.getMaxY();
         int count = Math.max(1, (maxY - minY + sampleStep.get() - 1) / sampleStep.get());
         EdgeData data = new EdgeData(count);
@@ -57,7 +55,24 @@ public class NewOldChunkDetector extends Module {
                 data.south[i][t] = sample(chunk, pos.set(bx + t, y, bz + 15));
             }
         }
-        cache.put(key(chunk.getPos().x, chunk.getPos().z), data);
+        return data;
+    }
+
+    @EventHandler private void onBlock(BlockUpdateEvent event) {
+        if (event == null || event.pos == null || mc.level == null) return;
+        int lx = event.pos.getX() & 15, lz = event.pos.getZ() & 15;
+        if (lx != 0 && lx != 15 && lz != 0 && lz != 15) return;
+        EdgeData data = cache.get(key(event.pos.getX() >> 4, event.pos.getZ() >> 4));
+        if (data == null) return;
+        int offset = event.pos.getY() - mc.level.getMinY();
+        if (offset < 0 || offset % sampleStep.get() != 0) return;
+        int row = offset / sampleStep.get();
+        if (row >= data.west.length) return;
+        int value = sample(event.newState);
+        if (lx == 0) data.west[row][lz] = value;
+        if (lx == 15) data.east[row][lz] = value;
+        if (lz == 0) data.north[row][lx] = value;
+        if (lz == 15) data.south[row][lx] = value;
     }
 
     @EventHandler private void onLeave(GameLeftEvent event) { cache.clear(); }
@@ -73,29 +88,24 @@ public class NewOldChunkDetector extends Module {
             if (dx * dx + dz * dz > maxSq) continue;
             EdgeData current = cache.get(key(x, z));
             if (current == null) continue;
-            int mismatches = compare(current.east, cache.get(key(x + 1, z)) == null ? null : cache.get(key(x + 1, z)).west);
-            mismatches += compare(current.south, cache.get(key(x, z + 1)) == null ? null : cache.get(key(x, z + 1)).north);
+            EdgeData east = cache.get(key(x + 1, z)), south = cache.get(key(x, z + 1));
+            int mismatches = compare(current.east, east == null ? null : east.west) + compare(current.south, south == null ? null : south.north);
             SettingColor color = mismatches >= mismatchLimit.get() ? seamColor.get() : continuousColor.get();
-            AABB grid = new AABB(x * 16, y, z * 16, x * 16 + 16, y + 0.04, z * 16 + 16);
-            event.renderer.box(grid, color, color, ShapeMode.Lines, 0);
+            event.renderer.box(new AABB(x * 16, y, z * 16, x * 16 + 16, y + 0.04, z * 16 + 16), color, color, ShapeMode.Lines, 0);
         }
     }
 
-    private static int sample(LevelChunk chunk, BlockPos pos) {
-        BlockState state = chunk.getBlockState(pos);
-        int block = state.getBlock().hashCode();
-        int fluid = state.getFluidState().getType().hashCode();
-        return 31 * block + fluid;
+    private static int sample(LevelChunk chunk, BlockPos pos) { return sample(chunk.getBlockState(pos)); }
+    private static int sample(BlockState state) {
+        return 31 * state.getBlock().hashCode() + state.getFluidState().getType().hashCode();
     }
-
     private static int compare(int[][] a, int[][] b) {
         if (b == null) return 0;
         int differences = 0;
-        int rows = Math.min(a.length, b.length);
-        for (int i = 0; i < rows; i++) for (int j = 0; j < 16; j++) if (a[i][j] != b[i][j]) differences++;
+        for (int i = 0; i < Math.min(a.length, b.length); i++)
+            for (int j = 0; j < 16; j++) if (a[i][j] != b[i][j]) differences++;
         return differences;
     }
-
     private static long key(int x, int z) { return (x & 0xffffffffL) | ((z & 0xffffffffL) << 32); }
 
     private static final class EdgeData {

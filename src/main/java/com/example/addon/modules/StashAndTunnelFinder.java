@@ -3,6 +3,7 @@ package com.example.addon.modules;
 import com.example.addon.AddonTemplate;
 import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
+import meteordevelopment.meteorclient.events.world.BlockUpdateEvent;
 import meteordevelopment.meteorclient.events.world.ChunkDataEvent;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
 import meteordevelopment.meteorclient.settings.BoolSetting;
@@ -20,68 +21,98 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.Set;
 
-/** One-time per-chunk stash/tunnel candidate extraction; render only draws cached candidates. */
 public class StashAndTunnelFinder extends Module {
+    private static final int MIN_Y = -58, MAX_Y = 60;
     private final SettingGroup sg = settings.getDefaultGroup();
-    private final Setting<Integer> distance = sg.add(new IntSetting.Builder().name("distance").defaultValue(72).range(16, 160).build());
-    private final Setting<Integer> maxCandidates = sg.add(new IntSetting.Builder().name("max-candidates-per-chunk").defaultValue(16).range(1, 48).build());
-    private final Setting<Integer> maxTracers = sg.add(new IntSetting.Builder().name("max-tracers").description("Caps center-to-target tracer lines per frame.").defaultValue(8).range(0, 32).build());
-    private final Setting<Boolean> showStashes = sg.add(new BoolSetting.Builder().name("isolated-storage").defaultValue(true).build());
+    private final Setting<Integer> distance = sg.add(new IntSetting.Builder().name("distance").defaultValue(96).range(16, 192).build());
+    private final Setting<Integer> maxCandidates = sg.add(new IntSetting.Builder().name("max-candidates-per-chunk").defaultValue(24).range(1, 64).build());
+    private final Setting<Integer> maxTracers = sg.add(new IntSetting.Builder().name("max-tracers").defaultValue(8).range(0, 32).build());
+    private final Setting<Boolean> showStashes = sg.add(new BoolSetting.Builder().name("container-clusters").defaultValue(true).build());
     private final Setting<Boolean> showTunnels = sg.add(new BoolSetting.Builder().name("straight-tunnels").defaultValue(true).build());
     private final Setting<SettingColor> stashColor = sg.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("stash-color").defaultValue(new SettingColor(255, 75, 85, 210)).build());
     private final Setting<SettingColor> tunnelColor = sg.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("tunnel-color").defaultValue(new SettingColor(70, 190, 255, 190)).build());
     private final Map<Long, List<Candidate>> cache = new HashMap<>();
 
     public StashAndTunnelFinder() {
-        super(AddonTemplate.VISUAL_CATEGORY, "stash-and-tunnel-finder", "Caches isolated underground storage and straight air-corridor candidates.");
+        super(AddonTemplate.VISUAL_CATEGORY, "stash-and-tunnel-finder", "Caches nearby container clusters and straight underground corridors.");
     }
 
     @Override public void onDeactivate() { cache.clear(); }
 
     @EventHandler private void onChunk(ChunkDataEvent event) {
         if (event == null || event.chunk() == null || mc.level == null) return;
-        LevelChunk chunk = event.chunk();
-        int minY = mc.level.getMinY();
-        int maxY = Math.min(45, mc.level.getMaxY() - 2);
-        List<Candidate> found = new ArrayList<>();
-        List<BlockPos> storage = new ArrayList<>();
+        rebuild(event.chunk());
+    }
 
-        for (int y = minY; y < Math.min(30, mc.level.getMaxY()); y++) {
-            for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
-                BlockPos p = new BlockPos((chunk.getPos().x << 4) + x, y, (chunk.getPos().z << 4) + z);
-                if (isStorage(chunk.getBlockState(p).getBlock())) storage.add(p);
-            }
+    @EventHandler private void onBlock(BlockUpdateEvent event) {
+        if (event == null || event.pos == null || event.newState == null || mc.level == null) return;
+        String id = event.newState.getBlock().builtInRegistryHolder().key().location().getPath();
+        if (event.newState.isAir() || isStorage(event.newState.getBlock()) || id.contains("piston")) {
+            LevelChunk chunk = mc.level.getChunk(event.pos.getX() >> 4, event.pos.getZ() >> 4);
+            if (chunk != null) rebuild(chunk);
         }
-        if (showStashes.get()) {
-            for (BlockPos p : storage) {
-                boolean nearby = false;
-                for (BlockPos other : storage) {
-                    if (other.equals(p)) continue;
-                    if (Math.abs(other.getX() - p.getX()) <= 5 && Math.abs(other.getY() - p.getY()) <= 4 && Math.abs(other.getZ() - p.getZ()) <= 5) {
-                        nearby = true; break;
+    }
+
+    private void rebuild(LevelChunk chunk) {
+        int minY = Math.max(MIN_Y, mc.level.getMinY());
+        int maxY = Math.min(MAX_Y, mc.level.getMaxY() - 3);
+        int bx = chunk.getPos().x << 4, bz = chunk.getPos().z << 4;
+        List<Candidate> found = new ArrayList<>();
+        Set<Long> storage = new HashSet<>();
+
+        for (int y = minY; y <= maxY; y++) for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
+            BlockPos p = new BlockPos(bx + x, y, bz + z);
+            if (isStorage(chunk.getBlockState(p).getBlock())) storage.add(p.asLong());
+        }
+
+        if (showStashes.get() && storage.size() >= 2) {
+            Set<Long> visited = new HashSet<>();
+            for (long packed : storage) {
+                if (!visited.add(packed)) continue;
+                BlockPos origin = BlockPos.of(packed);
+                List<BlockPos> cluster = new ArrayList<>();
+                cluster.add(origin);
+                for (long otherPacked : storage) {
+                    if (otherPacked == packed || visited.contains(otherPacked)) continue;
+                    BlockPos other = BlockPos.of(otherPacked);
+                    if (Math.abs(other.getX() - origin.getX()) <= 5 && Math.abs(other.getY() - origin.getY()) <= 4 && Math.abs(other.getZ() - origin.getZ()) <= 5) {
+                        visited.add(otherPacked);
+                        cluster.add(other);
                     }
                 }
-                if (!nearby && found.size() < maxCandidates.get()) found.add(new Candidate(p.getX(), p.getY(), p.getZ(), false, 1, 1));
+                if (cluster.size() >= 2) {
+                    int minX = 999999, minZ = 999999, minBoxY = 999999, maxX = -999999, maxZ = -999999, maxBoxY = -999999;
+                    for (BlockPos p : cluster) {
+                        minX = Math.min(minX, p.getX()); minZ = Math.min(minZ, p.getZ()); minBoxY = Math.min(minBoxY, p.getY());
+                        maxX = Math.max(maxX, p.getX()); maxZ = Math.max(maxZ, p.getZ()); maxBoxY = Math.max(maxBoxY, p.getY());
+                    }
+                    found.add(new Candidate(minX, minBoxY, minZ, maxX - minX + 1, maxBoxY - minBoxY + 1, maxZ - minZ + 1, false));
+                    if (found.size() >= maxCandidates.get()) break;
+                }
             }
         }
 
         if (showTunnels.get() && found.size() < maxCandidates.get()) {
-            int bx = chunk.getPos().x << 4, bz = chunk.getPos().z << 4;
-            outer: for (int y = minY; y < maxY; y++) {
+            outer: for (int y = minY; y <= maxY; y++) {
                 for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
-                    if (found.size() >= maxCandidates.get()) break outer;
                     BlockPos p = new BlockPos(bx + x, y, bz + z);
-                    if (!air2(chunk, p) || chunk.getBlockState(p.below()).isAir()) continue;
-                    int lenX = run(chunk, p, 1, 0, 5);
-                    int lenZ = run(chunk, p, 0, 1, 5);
-                    if (lenX >= 5) {
-                        found.add(new Candidate(p.getX(), y, p.getZ(), true, lenX, 1));
-                    } else if (lenZ >= 5) {
-                        found.add(new Candidate(p.getX(), y, p.getZ(), true, 1, lenZ));
+                    for (int width = 1; width <= 3; width++) {
+                        int lenX = tunnelRun(chunk, p, 1, 0, width);
+                        if (lenX >= 6) {
+                            found.add(new Candidate(p.getX(), y, p.getZ(), lenX, 2, width, true));
+                            if (found.size() >= maxCandidates.get()) break outer;
+                        }
+                        int lenZ = tunnelRun(chunk, p, 0, 1, width);
+                        if (lenZ >= 6) {
+                            found.add(new Candidate(p.getX(), y, p.getZ(), width, 2, lenZ, true));
+                            if (found.size() >= maxCandidates.get()) break outer;
+                        }
                     }
                 }
             }
@@ -105,10 +136,10 @@ public class StashAndTunnelFinder extends Module {
             if (candidates == null) continue;
             for (Candidate c : candidates) {
                 SettingColor color = c.tunnel ? tunnelColor.get() : stashColor.get();
-                AABB box = new AABB(c.x, c.y, c.z, c.x + c.width, c.y + 2, c.z + c.length);
+                AABB box = new AABB(c.x, c.y, c.z, c.x + c.width, c.y + c.height, c.z + c.length);
                 event.renderer.box(box, color, color, ShapeMode.Lines, 0);
                 if (tracers < maxTracers.get()) {
-                    Vec3 to = new Vec3(c.x + c.width / 2.0, c.y + 1.0, c.z + c.length / 2.0);
+                    Vec3 to = new Vec3(c.x + c.width / 2.0, c.y + c.height / 2.0, c.z + c.length / 2.0);
                     event.renderer.line(from.x, from.y, from.z, to.x, to.y, to.z, color);
                     tracers++;
                 }
@@ -116,34 +147,38 @@ public class StashAndTunnelFinder extends Module {
         }
     }
 
-    private static boolean air2(LevelChunk chunk, BlockPos p) {
-        return chunk.getBlockState(p).isAir() && chunk.getBlockState(p.above()).isAir();
-    }
-
-    private static int run(LevelChunk chunk, BlockPos start, int dx, int dz, int minimum) {
+    private static int tunnelRun(LevelChunk chunk, BlockPos start, int dx, int dz, int width) {
         int length = 0;
         for (int i = 0; i < 16; i++) {
-            BlockPos p = start.offset(dx * i, 0, dz * i);
-            if (p.getX() >> 4 != start.getX() >> 4 || p.getZ() >> 4 != start.getZ() >> 4) break;
-            if (!air2(chunk, p) || chunk.getBlockState(p.below()).isAir()) break;
+            boolean sectionValid = true;
+            int solidSides = 0;
+            for (int w = 0; w < width; w++) {
+                BlockPos floor = start.offset(dx * i + (dz != 0 ? w : 0), 0, dz * i + (dx != 0 ? w : 0));
+                if ((floor.getX() >> 4) != (start.getX() >> 4) || (floor.getZ() >> 4) != (start.getZ() >> 4)) return length >= 6 ? length : 0;
+                if (!chunk.getBlockState(floor).isAir() || !chunk.getBlockState(floor.above()).isAir() || chunk.getBlockState(floor.below()).isAir()) { sectionValid = false; break; }
+                if (!chunk.getBlockState(floor.offset(dz, 0, -dx)).isAir()) solidSides++;
+                if (!chunk.getBlockState(floor.offset(-dz, 0, dx)).isAir()) solidSides++;
+            }
+            if (!sectionValid || solidSides == 0) break;
             length++;
         }
-        return length >= minimum ? length : 0;
+        return length >= 6 ? length : 0;
     }
 
     private static boolean isStorage(Block block) {
-        return block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST || block == Blocks.BARREL
-            || block == Blocks.ENDER_CHEST || block == Blocks.HOPPER
-            || block == Blocks.DROPPER || block == Blocks.DISPENSER;
+        String n = block.builtInRegistryHolder().key().location().getPath();
+        return n.equals("chest") || n.equals("trapped_chest") || n.equals("barrel") || n.endsWith("shulker_box")
+            || n.equals("hopper") || n.equals("furnace") || n.equals("blast_furnace") || n.equals("smoker")
+            || n.equals("ender_chest");
     }
 
     private static long key(int x, int z) { return (x & 0xffffffffL) | ((z & 0xffffffffL) << 32); }
 
     private static final class Candidate {
-        final int x, y, z, width, length;
+        final int x, y, z, width, height, length;
         final boolean tunnel;
-        Candidate(int x, int y, int z, boolean tunnel, int width, int length) {
-            this.x = x; this.y = y; this.z = z; this.tunnel = tunnel; this.width = width; this.length = length;
+        Candidate(int x, int y, int z, int width, int height, int length, boolean tunnel) {
+            this.x = x; this.y = y; this.z = z; this.width = width; this.height = height; this.length = length; this.tunnel = tunnel;
         }
     }
 }
