@@ -69,8 +69,7 @@ public final class SchematicReader {
         String[] states=new String[volume]; Arrays.fill(states,"minecraft:air");
         Map<Integer,String> palette=new LinkedHashMap<>(); int next=0;
         for(Region r:decoded.values()) {
-            for(String state:r.states) {
-                // Keep the output palette compact; duplicate values are harmlessly deduplicated below.
+            for(String state:r.palette) {
                 if(!palette.containsValue(state)) palette.put(next++,state);
             }
             for(int y=0;y<r.h;y++) for(int z=0;z<r.l;z++) for(int x=0;x<r.w;x++) {
@@ -108,7 +107,7 @@ public final class SchematicReader {
             if(index>=palette.length) throw new IOException("Invalid Litematica palette reference.");
             states[i]=palette[index];
         }
-        return new Region(w,h,l,x,y,z,states);
+        return new Region(w,h,l,x,y,z,palette,states);
     }
 
     private static int dimension(CompoundTag t,String key) throws IOException {
@@ -137,5 +136,5 @@ public final class SchematicReader {
         if(cursor!=bytes.length)throw new IOException("Unexpected trailing block data.");
         return out;
     }
-    private record Region(int w,int h,int l,int x,int y,int z,String[] states) {}
+    private record Region(int w,int h,int l,int x,int y,int z,String[] palette,String[] states) {}
 }
