@@ -44,9 +44,10 @@ public class AutoBlockSelect extends Module {
         if (origin == null) origin = mc.player.blockPosition();
 
         BlockPos target = hit.getBlockPos().relative(hit.getDirection());
-        int x = target.getX() - origin.getX();
-        int y = target.getY() - origin.getY();
-        int z = target.getZ() - origin.getZ();
+        BlockPos local = SchematicManager.toLocalPos(target, origin);
+        int x = local.getX();
+        int y = local.getY();
+        int z = local.getZ();
 
         if (x < 0 || x >= schematic.getWidth()
             || y < 0 || y >= schematic.getHeight()
