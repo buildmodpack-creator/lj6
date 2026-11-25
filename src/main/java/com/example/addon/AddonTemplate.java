@@ -80,6 +80,7 @@ public class AddonTemplate extends MeteorAddon {
         Commands.add(new SchematicCommand());
         Hud.get().register(HudExample.INFO);
         Hud.get().register(MovementEquipmentHud.INFO);
+        Hud.get().add(MovementEquipmentHud.INFO, 8, 72);
         Hud.get().register(SchematicProgressHud.INFO);
         Hud.get().register(SusChunkHud.INFO);
     }
