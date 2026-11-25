@@ -39,7 +39,7 @@ public class TargetHUD extends Module {
         double height = tr.getHeight(true);
         Renderer2D.COLOR.begin();
         Renderer2D.COLOR.quad(event.screenWidth - width - 22, 12, width + 14, height * lines.length + 14, new Color(12, 12, 18, 185));
-        Renderer2D.COLOR.render();
+        Renderer2D.COLOR.render(event.drawContext.pose());
         double y = 18;
         for (int i = 0; i < lines.length; i++) {
             tr.render(lines[i], event.screenWidth - width - 15, y, i == 0 ? new Color(120, 220, 255) : Color.WHITE, true);
