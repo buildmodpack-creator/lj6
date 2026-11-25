@@ -32,7 +32,7 @@ public class MaceSlamAssist extends Module {
         double w = tr.getWidth(text, true);
         Renderer2D.COLOR.begin();
         Renderer2D.COLOR.quad(7, 30, w + 10, tr.getHeight(true) + 8, new Color(12, 12, 18, 180));
-        Renderer2D.COLOR.render();
+        Renderer2D.COLOR.render(event.drawContext.pose());
         tr.render(text, 12, 34, ready ? new Color(100, 255, 130) : Color.WHITE, true);
         tr.end();
         if (mc.player.onGround()) peakFall = 0;
