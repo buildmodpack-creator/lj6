@@ -12,6 +12,9 @@ import com.example.addon.modules.CustomLowFire;
 import com.example.addon.modules.EntityCuller;
 import com.example.addon.modules.ParticleLimiter;
 import com.example.addon.modules.StorageChunkCacheScanner;
+import com.example.addon.modules.SusChunkDetector;
+import com.example.addon.modules.NewOldChunkDetector;
+import com.example.addon.modules.StashAndTunnelFinder;
 import com.example.addon.modules.SchematicAutoBuilder;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
@@ -43,6 +46,9 @@ public class AddonTemplate extends MeteorAddon {
         Modules.get().add(new EntityCuller());
         Modules.get().add(new ParticleLimiter());
         Modules.get().add(new StorageChunkCacheScanner());
+        Modules.get().add(new SusChunkDetector());
+        Modules.get().add(new NewOldChunkDetector());
+        Modules.get().add(new StashAndTunnelFinder());
         Modules.get().add(new SchematicAutoBuilder());
 
         Commands.add(new CommandExample());
