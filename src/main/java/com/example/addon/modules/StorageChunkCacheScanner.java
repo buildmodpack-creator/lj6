@@ -165,7 +165,7 @@ public class StorageChunkCacheScanner extends Module {
         long posKey = event.pos.asLong();
         int weight = classify(event.newState);
         if (weight == 0) snapshot.remove(posKey);
-        else snapshot.put(posKey, event.pos.getX(), event.pos.getY(), event.pos.getZ(), weight);
+        else snapshot.put(posKey, event.pos.getX(), event.pos.getY(), event.pos.getZ(), weight, BuiltInRegistries.BLOCK.getKey(event.newState.getBlock()).toString());
     }
 
     @EventHandler
@@ -260,7 +260,7 @@ public class StorageChunkCacheScanner extends Module {
                         int x = (chunkX << 4) + localX;
                         int z = (chunkZ << 4) + localZ;
                         long posKey = BlockPos.asLong(x, y, z);
-                        snapshot.put(posKey, x, y, z, weight);
+                        snapshot.put(posKey, x, y, z, weight, BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
                     }
                 }
             }
@@ -330,17 +330,47 @@ public class StorageChunkCacheScanner extends Module {
         }
     }
 
+
+    /** Immutable client-loaded block snapshot shared by ESP modules. */
+    public record CachedBlock(int x, int y, int z, String blockId, int weight) {}
+
+    /** Reads only cached entries; it never scans chunk sections or queries world block states. */
+    public static java.util.List<CachedBlock> getCachedBlocks(double x, double y, double z, double range, int limit) {
+        StorageChunkCacheScanner module = INSTANCE;
+        if (module == null || !module.isActive() || limit <= 0) return java.util.List.of();
+        java.util.ArrayList<CachedBlock> result = new java.util.ArrayList<>();
+        int cx = ((int) Math.floor(x)) >> 4;
+        int cz = ((int) Math.floor(z)) >> 4;
+        int radius = (int) Math.ceil(range / 16.0) + 1;
+        double rangeSq = range * range;
+        for (int dx = -radius; dx <= radius && result.size() < limit; dx++) {
+            for (int dz = -radius; dz <= radius && result.size() < limit; dz++) {
+                ChunkSnapshot snapshot = module.cache.get(chunkKey(cx + dx, cz + dz));
+                if (snapshot == null) continue;
+                for (Marker marker : snapshot.markers.values()) {
+                    double bx = marker.x + 0.5 - x, by = marker.y + 0.5 - y, bz = marker.z + 0.5 - z;
+                    if (bx * bx + by * by + bz * bz > rangeSq) continue;
+                    result.add(new CachedBlock(marker.x, marker.y, marker.z, marker.blockId, marker.weight));
+                    if (result.size() >= limit) break;
+                }
+            }
+        }
+        return java.util.List.copyOf(result);
+    }
+
     private static final class Marker {
         private final int x;
         private final int y;
         private final int z;
         private final int weight;
+        private final String blockId;
 
-        private Marker(int x, int y, int z, int weight) {
+        private Marker(int x, int y, int z, int weight, String blockId) {
             this.x = x;
             this.y = y;
             this.z = z;
             this.weight = weight;
+            this.blockId = blockId;
         }
     }
 
@@ -349,8 +379,8 @@ public class StorageChunkCacheScanner extends Module {
         private int totalWeight;
         private int score;
 
-        private void put(long key, int x, int y, int z, int weight) {
-            Marker previous = markers.put(key, new Marker(x, y, z, weight));
+        private void put(long key, int x, int y, int z, int weight, String blockId) {
+            Marker previous = markers.put(key, new Marker(x, y, z, weight, blockId));
             if (previous != null) totalWeight -= previous.weight;
             totalWeight += weight;
             updateScore();

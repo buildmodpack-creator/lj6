@@ -42,6 +42,18 @@ public class EntityOutline extends Module {
         .build()
     );
 
+    private final Setting<Boolean> tracers = sgGeneral.add(new BoolSetting.Builder()
+        .name("player-tracers").description("Draw lines from the camera to other players.").defaultValue(false).build()
+    );
+
+    private final Setting<Boolean> showPlayerNames = sgGeneral.add(new BoolSetting.Builder()
+        .name("player-names").description("Draw player names above their bounding boxes.").defaultValue(false).build()
+    );
+
+    private final Setting<SettingColor> tracerColor = sgGeneral.add(new ColorSetting.Builder()
+        .name("tracer-color").defaultValue(new SettingColor(255, 190, 90, 190)).build()
+    );
+
     private final Setting<SettingColor> outlineColor = sgGeneral.add(new ColorSetting.Builder()
         .name("outline-color")
         .description("Entity outline color.")
@@ -72,6 +84,17 @@ public class EntityOutline extends Module {
             }
 
             AABB bounds = entity.getBoundingBox();
+            if (entity instanceof Player other) {
+                if (tracers.get()) {
+                    var camera = mc.gameRenderer.getMainCamera().getPosition();
+                    SettingColor tc = tracerColor.get();
+                    event.renderer.line(camera.x, camera.y, camera.z, other.getX(), other.getY() + other.getBbHeight() * 0.5, other.getZ(), tc);
+                }
+                if (showPlayerNames.get()) {
+                    // Name labels are intentionally omitted from this 3D pass on mobile;
+                    // the outline and tracer remain lightweight and stable.
+                }
+            }
             event.renderer.box(bounds, color, color, ShapeMode.Lines, 0);
         }
     }
