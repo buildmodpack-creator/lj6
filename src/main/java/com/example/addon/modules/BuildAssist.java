@@ -140,7 +140,7 @@ public class BuildAssist extends Module {
                     String expectedState = schematic.getBlockState(x, y, z);
                     if (SchematicData.isAir(expectedState)) continue;
 
-                    BlockPos pos = origin.offset(x, y, z);
+                    BlockPos pos = SchematicManager.toWorldPos(x, y, z, origin);
                     SettingColor color = schematicColor.get();
 
                     if (compareWorld.get()) {
