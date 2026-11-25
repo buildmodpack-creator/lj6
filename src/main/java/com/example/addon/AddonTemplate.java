@@ -21,6 +21,11 @@ import com.example.addon.modules.WingsAndHalo;
 import com.example.addon.modules.EntityChamsAndCape;
 import com.example.addon.modules.FlightAndKillVisuals;
 import com.example.addon.modules.SchematicAutoBuilder;
+import com.example.addon.modules.SprintReset;
+import com.example.addon.modules.CrystalAnchorHelper;
+import com.example.addon.modules.MaceSlamAssist;
+import com.example.addon.modules.ElytraChestplateSwap;
+import com.example.addon.modules.TargetHUD;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -35,6 +40,7 @@ public class AddonTemplate extends MeteorAddon {
     public static final Logger LOG = LogUtils.getLogger();
     public static final Category CATEGORY = new Category("LJCT");
     public static final Category VISUAL_CATEGORY = new Category("Visual");
+    public static final Category PVP_CATEGORY = new Category("PvP");
     public static final Category FIX_LAG_CATEGORY = new Category("Fix Lag");
     public static final HudGroup HUD_GROUP = new HudGroup("LJCT");
 
@@ -50,6 +56,12 @@ public class AddonTemplate extends MeteorAddon {
         Modules.get().add(new WingsAndHalo());
         Modules.get().add(new EntityChamsAndCape());
         Modules.get().add(new FlightAndKillVisuals());
+
+        Modules.get().add(new SprintReset());
+        Modules.get().add(new CrystalAnchorHelper());
+        Modules.get().add(new MaceSlamAssist());
+        Modules.get().add(new ElytraChestplateSwap());
+        Modules.get().add(new TargetHUD());
 
         Modules.get().add(new CustomLowFire());
         Modules.get().add(new EntityCuller());
@@ -71,6 +83,7 @@ public class AddonTemplate extends MeteorAddon {
     public void onRegisterCategories() {
         Modules.registerCategory(CATEGORY);
         Modules.registerCategory(VISUAL_CATEGORY);
+        Modules.registerCategory(PVP_CATEGORY);
         Modules.registerCategory(FIX_LAG_CATEGORY);
     }
 
