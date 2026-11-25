@@ -16,6 +16,10 @@ import com.example.addon.modules.StorageChunkCacheScanner;
 import com.example.addon.modules.SusChunkDetector;
 import com.example.addon.modules.NewOldChunkDetector;
 import com.example.addon.modules.StashAndTunnelFinder;
+import com.example.addon.modules.CS2KnifeViewmodel;
+import com.example.addon.modules.WingsAndHalo;
+import com.example.addon.modules.EntityChamsAndCape;
+import com.example.addon.modules.FlightAndKillVisuals;
 import com.example.addon.modules.SchematicAutoBuilder;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
@@ -42,6 +46,10 @@ public class AddonTemplate extends MeteorAddon {
         Modules.get().add(new AutoBlockSelect());
         Modules.get().add(new ChunkVisual());
         Modules.get().add(new EntityOutline());
+        Modules.get().add(new CS2KnifeViewmodel());
+        Modules.get().add(new WingsAndHalo());
+        Modules.get().add(new EntityChamsAndCape());
+        Modules.get().add(new FlightAndKillVisuals());
 
         Modules.get().add(new CustomLowFire());
         Modules.get().add(new EntityCuller());
