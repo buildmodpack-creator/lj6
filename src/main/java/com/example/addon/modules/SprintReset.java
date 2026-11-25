@@ -18,7 +18,7 @@ public class SprintReset extends Module {
     private final Setting<Integer> delay = sg.add(new IntSetting.Builder().name("delay-ticks").description("Ticks after a confirmed health reduction before sprint is released.").defaultValue(0).range(0, 8).build());
     private final Setting<Integer> hold = sg.add(new IntSetting.Builder().name("hold-ticks").description("Ticks to keep sprint released before restoring it.").defaultValue(1).range(1, 6).build());
 
-    private Entity pendingTarget;
+    private LivingEntity pendingTarget;
     private float healthBefore;
     private int confirmAt = -1;
     private int pendingUntil = -1;
