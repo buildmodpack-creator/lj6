@@ -41,7 +41,9 @@ public class EntityChamsAndCape extends Module {
             if (entity instanceof Player) {
                 if (!players.get()) continue;
             } else if (!mobs.get()) continue;
-            Vec3 interpolated = VisualColorUtil.lerpPosition(entity, event.tickDelta);\n            Vec3 offset = interpolated.subtract(entity.position());\n            AABB box = entity.getBoundingBox().move(offset).inflate(0.025);
+            Vec3 interpolated = VisualColorUtil.lerpPosition(entity, event.tickDelta);
+            Vec3 offset = interpolated.subtract(entity.position());
+            AABB box = entity.getBoundingBox().move(offset).inflate(0.025);
             event.renderer.box(box, color, color, filled.get() ? ShapeMode.Both : ShapeMode.Lines, 0);
             if (cape.get() && entity instanceof Player player) drawCape(event, player, color, event.tickDelta);
         }
