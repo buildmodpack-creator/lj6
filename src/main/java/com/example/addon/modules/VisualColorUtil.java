@@ -7,6 +7,8 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import java.awt.Color;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
 /** Small shared color helper; no per-frame buffer allocations. */
 final class VisualColorUtil {
@@ -32,7 +34,7 @@ final class VisualColorUtil {
     static Setting<Integer> addBrightness(SettingGroup group) {
         return group.add(new IntSetting.Builder().name("brightness").defaultValue(100).range(0, 100).build());
     }
-    static SettingColor resolve(SettingColor base, boolean chroma, int speed, int hue, int saturation, int brightness, int alpha) {
+    static Vec3 lerpPosition(Entity entity, float tickDelta) {\n        return new Vec3(entity.xo + (entity.getX() - entity.xo) * tickDelta, entity.yo + (entity.getY() - entity.yo) * tickDelta, entity.zo + (entity.getZ() - entity.zo) * tickDelta);\n    }\n    static SettingColor resolve(SettingColor base, boolean chroma, int speed, int hue, int saturation, int brightness, int alpha) {
         float h = chroma ? ((System.currentTimeMillis() * speed) % 12000L) / 12000f : hue / 360f;
         int rgb = chroma ? Color.HSBtoRGB(h, saturation / 100f, brightness / 100f) : Color.HSBtoRGB(h, saturation / 100f, brightness / 100f);
         if (!chroma && base != null) rgb = (base.r << 16) | (base.g << 8) | base.b;
