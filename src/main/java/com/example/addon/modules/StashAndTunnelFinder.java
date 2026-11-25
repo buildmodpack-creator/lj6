@@ -109,7 +109,7 @@ public class StashAndTunnelFinder extends Module {
                 event.renderer.box(box, color, color, ShapeMode.Lines, 0);
                 if (tracers < maxTracers.get()) {
                     Vec3 to = new Vec3(c.x + c.width / 2.0, c.y + 1.0, c.z + c.length / 2.0);
-                    event.renderer.line(from, to, color);
+                    event.renderer.line(from.x, from.y, from.z, to.x, to.y, to.z, color);
                     tracers++;
                 }
             }
