@@ -41,7 +41,7 @@ public class SchematicAutoBuilder extends Module {
 
     private final List<BuildTarget> targets=new ArrayList<>();
     private SchematicData plannedFor;
-    private int cursor,delayCounter,placed,total;
+    private int cursor,delayCounter,placed,total,plannedRotation;
     private String status="Idle";
     public static volatile String hudText="Schematic: not loaded";
 
@@ -54,18 +54,9 @@ public class SchematicAutoBuilder extends Module {
         return anchor!=null?anchor:new BlockPos(originX.get(),originY.get(),originZ.get());
     }
     private int normalizedRotation(){int r=((rotation.get()%360)+360)%360;return ((r+45)/90*90)%360;}
-    private BlockPos worldPos(int x,int y,int z){
-        int rx=x,rz=z;
-        switch(normalizedRotation()){
-            case 90->{rx=z;rz=-x;}
-            case 180->{rx=-x;rz=-z;}
-            case 270->{rx=-z;rz=x;}
-            default->{}
-        }
-        return origin().offset(rx,y,rz);
-    }
+    private BlockPos worldPos(int x,int y,int z){return SchematicManager.toWorldPos(x,y,z,origin());}
     private void resetPlan(){
-        targets.clear();cursor=0;placed=0;total=0;delayCounter=0;plannedFor=SchematicManager.getCurrent();
+        targets.clear();cursor=0;placed=0;total=0;delayCounter=0;plannedFor=SchematicManager.getCurrent();plannedRotation=normalizedRotation();SchematicManager.setRotation(plannedRotation);
         if(plannedFor==null){status="No schematic";updateHud();return;}
         for(int y=0;y<plannedFor.getHeight();y++)for(int z=0;z<plannedFor.getLength();z++)for(int x=0;x<plannedFor.getWidth();x++){
             String state=plannedFor.getBlockState(x,y,z);
@@ -76,7 +67,7 @@ public class SchematicAutoBuilder extends Module {
 
     @EventHandler private void onTick(TickEvent.Pre event){
         if(mc.player==null||mc.level==null)return;
-        if(SchematicManager.getCurrent()!=plannedFor)resetPlan();
+        if(SchematicManager.getCurrent()!=plannedFor||plannedRotation!=normalizedRotation())resetPlan();
         if(plannedFor==null||!autoPlace.get()||cursor>=targets.size())return;
         if(delayCounter>0){delayCounter--;return;}
         int actions=0;
