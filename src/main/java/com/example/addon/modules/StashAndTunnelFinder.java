@@ -74,6 +74,7 @@ public class StashAndTunnelFinder extends Module {
 
     private void rebuild(LevelChunk chunk) {
         int minY = mc.level.getMinY();
+        int maxY = mc.level.getMaxY() - 3;
         int bx = chunk.getPos().x << 4, bz = chunk.getPos().z << 4;
         List<Candidate> found = new ArrayList<>();
         Set<Long> storage = new HashSet<>();
