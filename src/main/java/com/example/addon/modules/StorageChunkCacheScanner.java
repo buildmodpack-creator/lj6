@@ -307,6 +307,7 @@ public class StorageChunkCacheScanner extends Module {
         );
         add(weights, 4, Blocks.HOPPER, Blocks.DISPENSER, Blocks.DROPPER, Blocks.CRAFTER, Blocks.ENCHANTING_TABLE);
         add(weights, 2, Blocks.FURNACE, Blocks.SMOKER, Blocks.BLAST_FURNACE, Blocks.BREWING_STAND, Blocks.LECTERN);
+        add(weights, 1, Blocks.OBSIDIAN, Blocks.BEDROCK, Blocks.ANVIL, Blocks.CHIPPED_ANVIL, Blocks.DAMAGED_ANVIL, Blocks.BEACON, Blocks.NETHERITE_BLOCK, Blocks.AMETHYST_BLOCK, Blocks.BUDDING_AMETHYST, Blocks.AMETHYST_CLUSTER, Blocks.SMALL_AMETHYST_BUD, Blocks.MEDIUM_AMETHYST_BUD, Blocks.LARGE_AMETHYST_BUD);
         add(weights, 8,
             Blocks.SPAWNER, Blocks.TRIAL_SPAWNER, Blocks.VAULT, Blocks.BEACON, Blocks.CONDUIT,
             Blocks.COMMAND_BLOCK, Blocks.CHAIN_COMMAND_BLOCK, Blocks.REPEATING_COMMAND_BLOCK,
