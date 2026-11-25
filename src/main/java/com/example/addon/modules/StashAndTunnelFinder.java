@@ -30,11 +30,10 @@ import java.util.Set;
 import java.util.Iterator;
 
 public class StashAndTunnelFinder extends Module {
-    private static final int MIN_Y = -58, MAX_Y = 60;
     private final SettingGroup sg = settings.getDefaultGroup();
     private final Setting<Integer> distance = sg.add(new IntSetting.Builder().name("distance").defaultValue(96).range(16, 192).build());
     private final Setting<Integer> maxCandidates = sg.add(new IntSetting.Builder().name("max-candidates-per-chunk").defaultValue(24).range(1, 64).build());
-    private final Setting<Integer> maxTracers = sg.add(new IntSetting.Builder().name("max-tracers").defaultValue(8).range(0, 32).build());
+    private final Setting<Integer> maxTracers = sg.add(new IntSetting.Builder().name("max-tracers").defaultValue(24).range(0, 64).build());
     private final Setting<Boolean> showStashes = sg.add(new BoolSetting.Builder().name("container-clusters").defaultValue(true).build());
     private final Setting<Boolean> showTunnels = sg.add(new BoolSetting.Builder().name("straight-tunnels").defaultValue(true).build());
     private final Setting<SettingColor> stashColor = sg.add(new meteordevelopment.meteorclient.settings.ColorSetting.Builder().name("stash-color").defaultValue(new SettingColor(255, 75, 85, 210)).build());
@@ -59,7 +58,6 @@ public class StashAndTunnelFinder extends Module {
 
     @EventHandler private void onBlock(BlockUpdateEvent event) {
         if (event == null || event.pos == null || mc.level == null) return;
-        if (event.pos.getY() < MIN_Y || event.pos.getY() > MAX_Y) return;
         dirtyChunks.add(key(event.pos.getX() >> 4, event.pos.getZ() >> 4));
     }
 
@@ -75,41 +73,30 @@ public class StashAndTunnelFinder extends Module {
     }
 
     private void rebuild(LevelChunk chunk) {
-        int minY = Math.max(MIN_Y, mc.level.getMinY());
-        int maxY = Math.min(MAX_Y, mc.level.getMaxY() - 3);
+        int minY = mc.level.getMinY();
         int bx = chunk.getPos().x << 4, bz = chunk.getPos().z << 4;
         List<Candidate> found = new ArrayList<>();
         Set<Long> storage = new HashSet<>();
 
-        for (int y = minY; y <= maxY; y++) for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
-            BlockPos p = new BlockPos(bx + x, y, bz + z);
-            if (isStorage(chunk.getBlockState(p).getBlock())) storage.add(p.asLong());
+        // Scan only sections that contain at least one relevant storage/bed block.
+        net.minecraft.world.level.chunk.LevelChunkSection[] sections = chunk.getSections();
+        for (int si = 0; si < sections.length; si++) {
+            net.minecraft.world.level.chunk.LevelChunkSection section = sections[si];
+            if (section == null || section.hasOnlyAir() || !section.maybeHas(state -> isStorage(state.getBlock()))) continue;
+            int baseY = minY + (si << 4);
+            for (int y = 0; y < 16; y++) for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
+                if (isStorage(section.getBlockState(x, y, z).getBlock())) {
+                    storage.add(net.minecraft.core.BlockPos.asLong(bx + x, baseY + y, bz + z));
+                }
+            }
         }
 
-        if (showStashes.get() && storage.size() >= 2) {
-            Set<Long> visited = new HashSet<>();
+        // A single container or bed is enough to create a visible box and tracer.
+        if (showStashes.get()) {
             for (long packed : storage) {
-                if (!visited.add(packed)) continue;
-                BlockPos origin = BlockPos.of(packed);
-                List<BlockPos> cluster = new ArrayList<>();
-                cluster.add(origin);
-                for (long otherPacked : storage) {
-                    if (otherPacked == packed || visited.contains(otherPacked)) continue;
-                    BlockPos other = BlockPos.of(otherPacked);
-                    if (Math.abs(other.getX() - origin.getX()) <= 5 && Math.abs(other.getY() - origin.getY()) <= 4 && Math.abs(other.getZ() - origin.getZ()) <= 5) {
-                        visited.add(otherPacked);
-                        cluster.add(other);
-                    }
-                }
-                if (cluster.size() >= 2) {
-                    int minX = 999999, minZ = 999999, minBoxY = 999999, maxX = -999999, maxZ = -999999, maxBoxY = -999999;
-                    for (BlockPos p : cluster) {
-                        minX = Math.min(minX, p.getX()); minZ = Math.min(minZ, p.getZ()); minBoxY = Math.min(minBoxY, p.getY());
-                        maxX = Math.max(maxX, p.getX()); maxZ = Math.max(maxZ, p.getZ()); maxBoxY = Math.max(maxBoxY, p.getY());
-                    }
-                    found.add(new Candidate(minX, minBoxY, minZ, maxX - minX + 1, maxBoxY - minBoxY + 1, maxZ - minZ + 1, false));
-                    if (found.size() >= maxCandidates.get()) break;
-                }
+                BlockPos p = BlockPos.of(packed);
+                found.add(new Candidate(p.getX(), p.getY(), p.getZ(), 1, 1, 1, false));
+                if (found.size() >= maxCandidates.get()) break;
             }
         }
 
@@ -193,7 +180,7 @@ public class StashAndTunnelFinder extends Module {
         String n = block.builtInRegistryHolder().key().location().getPath();
         return n.equals("chest") || n.equals("trapped_chest") || n.equals("barrel") || n.endsWith("shulker_box")
             || n.equals("hopper") || n.equals("furnace") || n.equals("blast_furnace") || n.equals("smoker")
-            || n.equals("ender_chest");
+            || n.equals("ender_chest") || n.endsWith("_bed");
     }
 
     private static long key(int x, int z) { return (x & 0xffffffffL) | ((z & 0xffffffffL) << 32); }
