@@ -71,7 +71,7 @@ public class CrystalAnchorHelper extends Module {
         double w = tr.getWidth(text, true);
         Renderer2D.COLOR.begin();
         Renderer2D.COLOR.quad(7, 7, w + 10, tr.getHeight(true) + 8, new Color(15, 15, 20, 175));
-        Renderer2D.COLOR.render();
+        Renderer2D.COLOR.render(event.drawContext.pose());
         tr.render(text, 12, 11, Color.WHITE, true);
         tr.end();
     }
