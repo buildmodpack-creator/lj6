@@ -68,7 +68,7 @@ public class FlightAndKillVisuals extends Module {
             while (trail.size() > 1) trail.removeLast();
         }
 
-        if (hitRipple || killColumn) {
+        if (hitRipple.get() || killColumn.get()) {
             for (Entity entity : mc.level.entitiesForRendering()) {
                 if (!(entity instanceof LivingEntity living) || entity == mc.player) continue;
                 float hp = living.getHealth();
