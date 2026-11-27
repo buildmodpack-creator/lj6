@@ -13,9 +13,14 @@ import net.minecraft.world.phys.Vec3;
 /** Limits incoming particle spawns without scanning every live particle each tick. */
 public class ParticleLimiter extends Module {
     private static volatile ParticleLimiter INSTANCE;
+
+    // Tick-local cache: avoid repeatedly reading module state/settings for every particle.
     private static int acceptedThisTick;
+    private static int cachedMaxSpawns;
+    private static double cachedMaxDistanceSquared;
     private static double cameraX, cameraY, cameraZ;
     private static boolean cameraPositionValid;
+    private static boolean limiterEnabled;
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final Setting<Integer> maxSpawnsPerTick = sgGeneral.add(new IntSetting.Builder()
@@ -41,13 +46,25 @@ public class ParticleLimiter extends Module {
 
     public static void beginTick() {
         acceptedThisTick = 0;
+        limiterEnabled = false;
+        cameraPositionValid = false;
+
+        ParticleLimiter module = INSTANCE;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) {
-            cameraPositionValid = false;
+        if (module == null || mc == null || mc.player == null || mc.level == null || mc.gameRenderer == null) return;
+        if (!module.isActive()) return;
+
+        cachedMaxSpawns = module.maxSpawnsPerTick.get();
+        double distance = module.maxDistance.get();
+        cachedMaxDistanceSquared = distance * distance;
+        limiterEnabled = true;
+
+        Vec3 camera = mc.gameRenderer.getMainCamera().getPosition();
+        if (camera == null) {
+            limiterEnabled = false;
             return;
         }
 
-        Vec3 camera = mc.gameRenderer.getMainCamera().getPosition();
         cameraX = camera.x;
         cameraY = camera.y;
         cameraZ = camera.z;
@@ -55,17 +72,15 @@ public class ParticleLimiter extends Module {
     }
 
     public static boolean allowParticle(Particle particle) {
-        ParticleLimiter module = INSTANCE;
-        if (module == null || !module.isActive()) return true;
-        if (!cameraPositionValid || particle == null) return true;
-        if (acceptedThisTick >= module.maxSpawnsPerTick.get()) return false;
+        if (!limiterEnabled || !cameraPositionValid || particle == null) return true;
+        if (acceptedThisTick >= cachedMaxSpawns) return false;
 
         AABB bounds = particle.getBoundingBox();
+        if (bounds == null) return true;
         double dx = (bounds.minX + bounds.maxX) * 0.5 - cameraX;
         double dy = (bounds.minY + bounds.maxY) * 0.5 - cameraY;
         double dz = (bounds.minZ + bounds.maxZ) * 0.5 - cameraZ;
-        double maxDistance = module.maxDistance.get();
-        if (dx * dx + dy * dy + dz * dz > maxDistance * maxDistance) return false;
+        if (dx * dx + dy * dy + dz * dz > cachedMaxDistanceSquared) return false;
 
         acceptedThisTick++;
         return true;
